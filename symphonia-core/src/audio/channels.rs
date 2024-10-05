@@ -846,6 +846,29 @@ pub mod layouts {
         Position::SIDE_RIGHT
     );
 
+    /// 8 channels.
+    ///
+    /// The channels in this layout are:
+    /// * Front left
+    /// * Front right
+    /// * Front center
+    /// * Low-frequency effects
+    /// * Side left
+    /// * Side right
+    /// * Rear left
+    /// * Rear right
+
+    pub const CHANNEL_LAYOUT_8: Channels = layout!(
+        Position::FRONT_LEFT,
+        Position::FRONT_RIGHT,
+        Position::FRONT_CENTER,
+        Position::LFE1,
+        Position::FRONT_LEFT_CENTER,
+        Position::FRONT_RIGHT_CENTER,
+        Position::REAR_LEFT,
+        Position::REAR_RIGHT
+    );
+
     /// 22.2 audio.
     ///
     /// The channels in this layout are:
