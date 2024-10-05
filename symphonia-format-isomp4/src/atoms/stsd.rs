@@ -8,6 +8,7 @@
 use core::str;
 
 use log::debug;
+use symphonia_core::audio::layouts::CHANNEL_LAYOUT_8;
 use symphonia_core::audio::{Channels, Position};
 use symphonia_core::codecs::audio::well_known::CODEC_ID_MP3;
 use symphonia_core::codecs::audio::well_known::{CODEC_ID_PCM_F32BE, CODEC_ID_PCM_F32LE};
@@ -251,7 +252,7 @@ fn lpcm_codec_id(bits_per_sample: u32, lpcm_flags: u32) -> AudioCodecId {
 fn pcm_channels(num_channels: u32) -> Result<Channels> {
     match num_channels {
         1 => Ok(Channels::Positioned(Position::FRONT_LEFT)),
-        2 => Ok(Channels::Positioned(Position::FRONT_LEFT | Position::FRONT_RIGHT)),
+        2 | 8 => Ok(Channels::Positioned(Position::FRONT_LEFT | Position::FRONT_RIGHT)), // channel layout will be parsed later from chan atom
         _ => decode_error("isomp4: invalid number of channels"),
     }
 }
@@ -435,6 +436,25 @@ fn read_audio_sample_entry<B: ReadBytes>(
                 let atom = iter.read_atom::<WaveAtom>()?;
                 atom.fill_audio_sample_entry(&mut entry)?;
             }
+            // AtomType::AudioSampleEntryChan => {
+            //     // Channel information atom
+            //     let channels = match iter.read_atom::<ChanAtom>()?.channel_layout_tag {
+            //         0x00800008 => Some(CHANNEL_LAYOUT_8),
+            //         _ => None
+            //     };
+
+            //     if channels.is_some() {
+            //         if let Some(AudioCodecSpecific::Pcm(pcm)) = codec_specific {
+            //             codec_specific = Some(AudioCodecSpecific::Pcm(Pcm {
+            //                 codec_id: pcm.codec_id,
+            //                 bits_per_sample: pcm.bits_per_sample,
+            //                 bits_per_coded_sample: pcm.bits_per_coded_sample,
+            //                 frames_per_packet: pcm.frames_per_packet,
+            //                 channels: channels.unwrap(),
+            //             }))
+            //         }
+            //     }
+            // }
             _ => {
                 debug!("unknown audio sample entry sub-atom: {:?}.", entry_header.atom_type());
             }
@@ -693,6 +713,29 @@ fn read_null_terminated_utf8<B: ReadBytes>(
     };
 
     Ok((len, value))
+}
+
+/// Audio channel layout atom.
+#[allow(dead_code)]
+#[derive(Debug)]
+pub struct ChanAtom {
+    /// Channel layout tag - https://developer.apple.com/documentation/coreaudiotypes/audio-channel-layout-tags
+    pub channel_layout_tag: u32,
+    /// Channel bitmap
+    pub channel_bitmap: u32,
+    /// Channel description
+    pub number_channel_descriptions: u32,
+}
+
+impl Atom for ChanAtom {
+    fn read<B: ReadBytes>(reader: &mut B, _header: AtomHeader) -> Result<Self> {
+        let _ = reader.read_be_u32()?; // ignore version and flags
+        Ok(ChanAtom {
+            channel_layout_tag: reader.read_be_u32()?,
+            channel_bitmap: reader.read_be_u32()?,
+            number_channel_descriptions: reader.read_be_u32()?,
+        })
+    }
 }
 
 /// Bitrate atom.
