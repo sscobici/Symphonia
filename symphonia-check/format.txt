@@ -1,0 +1,4 @@
+General;General,Format:%Format%,Duration:%Duration/String3%\r\n
+Video;Video %StreamOrder%,Format:%Format%,Width:%Width%,Height:%Height%\r\n
+Audio;Audio %StreamOrder%,Format:%Format%\r\n
+Text;Text %StreamOrder%,Format:%Format%\r\n
