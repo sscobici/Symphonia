@@ -8,6 +8,9 @@ The currently supported reference decoders include:
 * `flac`
 * `mpg123` (when provided by `libmad` aka. `mpg321`)
 * `oggdec`
+* `mediainfo`
+
+When decoder is `mediainfo` the utility will compare the mediainfo information against symphonia's demuxer detected information, no decoding will happen
 
 ## Prerequisites
 
@@ -33,6 +36,9 @@ symphonia-check --no-gapless /path/to/file
 
 # Any of the above commands, using a specific reference decoder (--ref <decoder>).
 symphonia-check --ref flac /path/to/flac/file
+
+# Test demuxer output for a single file or folder against mediainfo CLI's output.
+symphonia-check --ref mediainfo /path/to/folder
 ```
 
 ### Interpreting Results
@@ -51,6 +57,31 @@ ffmpeg -v debug -i /path/to/file -f null -
 ```
 
 Regardless, feel free to open an issue if you encounter a check failure. Please note that a sample file reproducing the failure is almost always required to triage the issue.
+
+### Interpreting Results Mediainfo
+When the Mediainfo decoder is used, the utility generates two outputs and compares them for each file in the folder.
+`format.txt` file is used to generate the mediainfo's output. This file specifies which fields should be printed (see [Mediainfo Fields](https://mediaarea.net/en/MediaInfo/Support/Fields)). 
+An example of the Mediainfo's output can be obtained by running the following command from the project's root directory:
+```bash
+mediainfo --Output=file://./symphonia-check/format.txt /path/to/file
+
+General,Format:MPEG-4,Duration:01:54:10.176
+Video 0,Format:HEVC,Width:3840,Height:2080
+Audio 1,Format:AC-3
+Audio 2,Format:E-AC-3
+Text 3,Format:Timed Text
+Text 4,Format:Timed Text
+```
+
+symphonia-check produces a similar output using `FormatReader` and then compares the results.
+If outputs match, only a file name will be printed, otherwise the file name will be followed by the list of differences where the `Expected` column represents the Mediainfo output
+```bash
+File: /file/to/path
+    Expected:                                         Actual:
+*** Audio 8,Format:AC-3                               Audio 8,Format:E-AC-3
+```
+
+TODO: Add more parameters to compare as they are implemented in Symphonia.
 
 ## License
 

@@ -16,6 +16,7 @@ use std::fs::File;
 use std::path::Path;
 use std::process::{Command, Stdio};
 
+use mediainfo::{build_mediainfo_command, run_test_mediainfo};
 use symphonia::core::audio::GenericAudioBufferRef;
 use symphonia::core::codecs::audio::{AudioDecoder, AudioDecoderOptions};
 use symphonia::core::codecs::CodecParameters;
@@ -27,6 +28,7 @@ use symphonia::core::meta::MetadataOptions;
 
 use clap::Arg;
 use log::warn;
+mod mediainfo;
 
 /// The absolute maximum allowable sample delta. Around 2^-17 (-102.4dB).
 const ABS_MAX_ALLOWABLE_SAMPLE_DELTA: f32 = 0.00001;
@@ -35,12 +37,13 @@ const ABS_MAX_ALLOWABLE_SAMPLE_DELTA: f32 = 0.00001;
 // ISO. Around 2^-14 (-84.2dB).
 // const ABS_MAX_ALLOWABLE_SAMPLE_DELTA_MP3: f32 = 0.00006104;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 enum RefDecoder {
     Ffmpeg,
     Flac,
     Mpg123,
     Oggdec,
+    Mediainfo,
 }
 
 impl Default for RefDecoder {
@@ -69,6 +72,9 @@ struct TestResult {
     abs_max_delta: f32,
     tgt_unchecked_samples: u64,
     ref_unchecked_samples: u64,
+    n_files: u32,
+    n_failed_files: u32,
+    has_failed: bool,
 }
 
 fn build_ffmpeg_command(path: &str, gapless: bool) -> Command {
@@ -133,6 +139,7 @@ impl RefProcess {
             RefDecoder::Flac => build_flac_command(path),
             RefDecoder::Mpg123 => build_mpg123_command(path, gapless),
             RefDecoder::Oggdec => build_oggdec_command(path),
+            RefDecoder::Mediainfo => build_mediainfo_command(path),
         };
 
         let child = cmd.spawn()?;
@@ -328,6 +335,9 @@ fn run_check(
         acct.n_failed_samples += n_failed_pkt_samples;
         acct.n_failed_packets += u64::from(n_failed_pkt_samples > 0);
         acct.n_packets += 1;
+        if acct.n_failed_samples > 0 {
+            acct.has_failed = true;
+        }
 
         if opts.stop_after_fail && acct.n_failed_packets > 0 {
             break true;
@@ -349,6 +359,10 @@ fn run_check(
 }
 
 fn run_test(path: &str, opts: &TestOptions, result: &mut TestResult) -> Result<()> {
+    if opts.ref_decoder == RefDecoder::Mediainfo {
+        return run_test_mediainfo(Path::new(path), opts, result);
+    }
+
     // 1. Start the reference decoder process.
     let mut ref_process = RefProcess::try_spawn(opts.ref_decoder, opts.gapless, path)?;
 
@@ -394,7 +408,7 @@ fn main() {
             Arg::new("decoder")
                 .long("ref")
                 .takes_value(true)
-                .possible_values(["ffmpeg", "flac", "mpg123", "oggdec"])
+                .possible_values(["ffmpeg", "flac", "mpg123", "oggdec", "mediainfo"])
                 .default_value("ffmpeg")
                 .help("Specify a particular decoder to be used as the reference"),
         )
@@ -409,6 +423,7 @@ fn main() {
         "flac" => RefDecoder::Flac,
         "mpg123" => RefDecoder::Mpg123,
         "oggdec" => RefDecoder::Oggdec,
+        "mediainfo" => RefDecoder::Mediainfo,
         _ => {
             // This will never occur if the possible values of the argument are the same as the
             // match arms above.
@@ -443,16 +458,31 @@ fn main() {
     println!("Test Results");
     println!("=================================================");
     println!();
-    println!("  Failed/Total Packets: {:>12}/{:>12}", res.n_failed_packets, res.n_packets);
-    println!("  Failed/Total Samples: {:>12}/{:>12}", res.n_failed_samples, res.n_samples);
-    println!();
-    println!("  Remaining Target Samples:          {:>12}", res.tgt_unchecked_samples);
-    println!("  Remaining Reference Samples:       {:>12}", res.ref_unchecked_samples);
-    println!();
-    println!("  Absolute Maximum Sample Delta:       {:.8}", res.abs_max_delta);
+
+    match ref_decoder {
+        RefDecoder::Mediainfo => {
+            println!("  Failed / Total Files: {:>12} / {}", res.n_failed_files, res.n_files);
+        }
+        _ => {
+            println!(
+                "  Failed / Total Packets: {:>12} / {:>12}",
+                res.n_failed_packets, res.n_packets
+            );
+            println!(
+                "  Failed / Total Samples: {:>12} / {:>12}",
+                res.n_failed_samples, res.n_samples
+            );
+            println!();
+            println!("  Remaining Target Samples:          {:>12}", res.tgt_unchecked_samples);
+            println!("  Remaining Reference Samples:       {:>12}", res.ref_unchecked_samples);
+            println!();
+            println!("  Absolute Maximum Sample Delta:       {:.8}", res.abs_max_delta);
+        }
+    }
+
     println!();
 
-    let ret = if res.n_failed_samples == 0 {
+    let ret = if !res.has_failed {
         println!("PASS");
         0
     }
