@@ -35,6 +35,7 @@ use crate::atoms::{
 };
 use crate::fp::FpU16;
 
+use super::dovi::DoviAtom;
 use super::{AtomIterator, AvcCAtom, HvcCAtom};
 
 /// Sample description atom.
@@ -550,6 +551,10 @@ fn read_visual_sample_entry<B: ReadBytes>(
             }
             AtomType::HevcConfiguration => {
                 let atom = iter.read_atom::<HvcCAtom>()?;
+                atom.fill_video_sample_entry(&mut entry);
+            }
+            AtomType::DolbyVisionConfiguration => {
+                let atom = iter.read_atom::<DoviAtom>()?;
                 atom.fill_video_sample_entry(&mut entry);
             }
             _ => {
