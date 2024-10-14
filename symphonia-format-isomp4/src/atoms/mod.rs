@@ -16,6 +16,7 @@ pub(crate) mod co64;
 pub(crate) mod ctts;
 pub(crate) mod dac3;
 pub(crate) mod dec3;
+pub(crate) mod dvvc;
 pub(crate) mod edts;
 pub(crate) mod elst;
 pub(crate) mod esds;
@@ -141,6 +142,7 @@ pub enum AtomType {
     DateTag,
     DescriptionTag,
     DiskNumberTag,
+    DolbyVisionConfiguration,
     Eac3Config,
     Edit,
     EditList,
@@ -252,6 +254,7 @@ impl From<[u8; 4]> for AtomType {
             b"dOps" => AtomType::OpusDsConfig,
             b"dvh1" => AtomType::VisualSampleEntryDvh1,
             b"dvhe" => AtomType::VisualSampleEntryDvhe,
+            b"dvvC" => AtomType::DolbyVisionConfiguration,
             b"edts" => AtomType::Edit,
             b"elst" => AtomType::EditList,
             b"esds" => AtomType::Esds,
