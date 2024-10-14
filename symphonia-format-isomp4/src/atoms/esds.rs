@@ -6,7 +6,9 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use symphonia_core::codecs::audio::AudioCodecParameters;
-use symphonia_core::codecs::video::VideoCodecParameters;
+use symphonia_core::codecs::video::{
+    VideoCodecParameters, VideoExtraData, VIDEO_EXTRA_DATA_ID_NULL,
+};
 use symphonia_core::codecs::CodecId;
 use symphonia_core::errors::{decode_error, unsupported_error, Error, Result};
 use symphonia_core::io::{FiniteStream, ReadBytes, ScopedStream};
@@ -129,7 +131,11 @@ impl EsdsAtom {
         }
 
         if let Some(ds_config) = &self.descriptor.dec_config.dec_specific_info {
-            codec_params.with_extra_data(ds_config.extra_data.clone());
+            // Unknow extra data type.
+            codec_params.add_extra_data(VideoExtraData {
+                id: VIDEO_EXTRA_DATA_ID_NULL,
+                data: ds_config.extra_data.clone(),
+            });
         }
 
         Ok(())

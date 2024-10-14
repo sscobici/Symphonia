@@ -6,8 +6,9 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use symphonia_common::mpeg::video::AVCDecoderConfigurationRecord;
+use symphonia_core::codecs::video::well_known::extra_data::VIDEO_EXTRA_DATA_ID_AVC_DECODER_CONFIG;
 use symphonia_core::codecs::video::well_known::CODEC_ID_H264;
-use symphonia_core::codecs::video::VideoCodecParameters;
+use symphonia_core::codecs::video::{VideoCodecParameters, VideoExtraData};
 use symphonia_core::codecs::CodecProfile;
 use symphonia_core::errors::{Error, Result};
 use symphonia_core::io::ReadBytes;
@@ -18,7 +19,7 @@ use crate::atoms::{Atom, AtomHeader};
 #[derive(Debug)]
 pub struct AvcCAtom {
     /// AVC extra data (AVCDecoderConfigurationRecord).
-    extra_data: Box<[u8]>,
+    extra_data: VideoExtraData,
     profile: CodecProfile,
     level: u32,
 }
@@ -31,9 +32,12 @@ impl Atom for AvcCAtom {
             .data_len()
             .ok_or_else(|| Error::DecodeError("isomp4 (avcC): expected atom size to be known"))?;
 
-        let extra_data = reader.read_boxed_slice_exact(len as usize)?;
+        let extra_data = VideoExtraData {
+            id: VIDEO_EXTRA_DATA_ID_AVC_DECODER_CONFIG,
+            data: reader.read_boxed_slice_exact(len as usize)?,
+        };
 
-        let avc_config = AVCDecoderConfigurationRecord::read(&extra_data)?;
+        let avc_config = AVCDecoderConfigurationRecord::read(&extra_data.data)?;
 
         Ok(Self { extra_data, profile: avc_config.profile, level: avc_config.level })
     }
@@ -45,6 +49,6 @@ impl AvcCAtom {
             .for_codec(CODEC_ID_H264)
             .with_profile(self.profile)
             .with_level(self.level)
-            .with_extra_data(self.extra_data.clone());
+            .add_extra_data(self.extra_data.clone());
     }
 }
