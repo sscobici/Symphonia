@@ -6,8 +6,8 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use symphonia_common::mpeg::video::HEVCDecoderConfigurationRecord;
-use symphonia_core::codecs::video::well_known::CODEC_ID_HEVC;
-use symphonia_core::codecs::video::VideoCodecParameters;
+use symphonia_core::codecs::video::well_known::extra_data::VIDEO_EXTRA_DATA_ID_HEVC_DECODER_CONFIG;
+use symphonia_core::codecs::video::VideoExtraData;
 use symphonia_core::codecs::CodecProfile;
 use symphonia_core::errors::{Error, Result};
 use symphonia_core::io::ReadBytes;
@@ -18,9 +18,9 @@ use crate::atoms::{Atom, AtomHeader};
 #[derive(Debug)]
 pub struct HvcCAtom {
     /// HEVC extra data (HEVCDecoderConfigurationRecord).
-    extra_data: Box<[u8]>,
-    profile: CodecProfile,
-    level: u32,
+    pub extra_data: VideoExtraData,
+    pub profile: CodecProfile,
+    pub level: u32,
 }
 
 impl Atom for HvcCAtom {
@@ -31,20 +31,13 @@ impl Atom for HvcCAtom {
             .data_len()
             .ok_or_else(|| Error::DecodeError("isomp4 (hvcC): expected atom size to be known"))?;
 
-        let extra_data = reader.read_boxed_slice_exact(len as usize)?;
+        let hevc_data = VideoExtraData {
+            id: VIDEO_EXTRA_DATA_ID_HEVC_DECODER_CONFIG,
+            data: reader.read_boxed_slice_exact(len as usize)?,
+        };
 
-        let hevc_config = HEVCDecoderConfigurationRecord::read(&extra_data)?;
+        let hevc_config = HEVCDecoderConfigurationRecord::read(&hevc_data.data)?;
 
-        Ok(Self { extra_data, profile: hevc_config.profile, level: hevc_config.level })
-    }
-}
-
-impl HvcCAtom {
-    pub fn fill_codec_params(&self, codec_params: &mut VideoCodecParameters) {
-        codec_params
-            .for_codec(CODEC_ID_HEVC)
-            .with_profile(self.profile)
-            .with_level(self.level)
-            .with_extra_data(self.extra_data.clone());
+        Ok(Self { extra_data: hevc_data, profile: hevc_config.profile, level: hevc_config.level })
     }
 }

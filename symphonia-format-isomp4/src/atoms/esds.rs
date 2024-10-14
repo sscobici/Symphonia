@@ -6,7 +6,6 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use symphonia_core::codecs::audio::AudioCodecParameters;
-use symphonia_core::codecs::video::VideoCodecParameters;
 use symphonia_core::codecs::CodecId;
 use symphonia_core::errors::{decode_error, unsupported_error, Error, Result};
 use symphonia_core::io::{FiniteStream, ReadBytes, ScopedStream};
@@ -98,33 +97,6 @@ impl EsdsAtom {
             None => {
                 // Unknown object type indication.
                 codec_params.for_codec(CODEC_ID_NULL_AUDIO);
-            }
-        }
-
-        if let Some(ds_config) = &self.descriptor.dec_config.dec_specific_info {
-            codec_params.with_extra_data(ds_config.extra_data.clone());
-        }
-
-        Ok(())
-    }
-
-    /// If the elementary stream descriptor describes an video stream, populate the provided
-    /// video codec parameters.
-    pub fn fill_video_codec_params(&self, codec_params: &mut VideoCodecParameters) -> Result<()> {
-        use symphonia_core::codecs::video::CODEC_ID_NULL_VIDEO;
-
-        match get_codec_id_from_object_type(self.descriptor.dec_config.object_type_indication) {
-            Some(CodecId::Video(id)) => {
-                // Object type indication identified an video codec.
-                codec_params.for_codec(id);
-            }
-            Some(_) => {
-                // Object type indication identified a non-video codec. This is unexpected.
-                return decode_error("isomp4 (esds): expected a video codec type");
-            }
-            None => {
-                // Unknown object type indication.
-                codec_params.for_codec(CODEC_ID_NULL_VIDEO);
             }
         }
 
