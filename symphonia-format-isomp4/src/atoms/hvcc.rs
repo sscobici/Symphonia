@@ -18,8 +18,9 @@ use crate::atoms::{Atom, AtomHeader};
 #[allow(dead_code)]
 #[derive(Debug)]
 pub struct HvcCAtom {
-    /// HEVC extra data (HEVCDecoderConfigurationRecord).
-    extra_data: VideoExtraData,
+    /// container of many video extra data
+    /// main one is HEVC extra data (HEVCDecoderConfigurationRecord), other data can be added later from other atoms
+    pub extra_data: Vec<VideoExtraData>,
     profile: CodecProfile,
     level: u32,
 }
@@ -32,14 +33,14 @@ impl Atom for HvcCAtom {
             .data_len()
             .ok_or_else(|| Error::DecodeError("isomp4 (hvcC): expected atom size to be known"))?;
 
-        let extra_data = VideoExtraData {
+        let hevc_data = VideoExtraData {
             id: VIDEO_EXTRA_DATA_ID_HEVC_DECODER_CONFIG,
             data: reader.read_boxed_slice_exact(len as usize)?,
         };
 
-        let hevc_config = HEVCDecoderConfigurationRecord::read(&extra_data.data)?;
+        let hevc_config = HEVCDecoderConfigurationRecord::read(&hevc_data.data)?;
 
-        Ok(Self { extra_data, profile: hevc_config.profile, level: hevc_config.level })
+        Ok(Self { extra_data: vec![hevc_data], profile: hevc_config.profile, level: hevc_config.level })
     }
 }
 
@@ -49,6 +50,6 @@ impl HvcCAtom {
             .for_codec(CODEC_ID_HEVC)
             .with_profile(self.profile)
             .with_level(self.level)
-            .add_extra_data(self.extra_data.clone());
+            .add_extra_data(&self.extra_data);
     }
 }

@@ -127,28 +127,17 @@ fn make_video_codec_params(
     codec_params.with_width(video.pixel_width).with_height(video.pixel_height);
 
     if let Some(codec_private) = track.codec_private {
-        match id {
-            CODEC_ID_H264 => codec_params.add_extra_data(VideoExtraData {
-                id: VIDEO_EXTRA_DATA_ID_AVC_DECODER_CONFIG,
-                data: codec_private,
-            }),
-            CODEC_ID_HEVC => codec_params.add_extra_data(VideoExtraData {
-                id: VIDEO_EXTRA_DATA_ID_HEVC_DECODER_CONFIG,
-                data: codec_private,
-            }),
-            CODEC_ID_VP9 => codec_params.add_extra_data(VideoExtraData {
-                id: VIDEO_EXTRA_DATA_ID_VP9_DECODER_CONFIG,
-                data: codec_private,
-            }),
-            CODEC_ID_AV1 => codec_params.add_extra_data(VideoExtraData {
-                id: VIDEO_EXTRA_DATA_ID_AV1_DECODER_CONFIG,
-                data: codec_private,
-            }),
-            _ => codec_params.add_extra_data(VideoExtraData {
-                id: VIDEO_EXTRA_DATA_ID_NULL,
-                data: codec_private,
-            }),
+        let extra_data_id = match id {
+            CODEC_ID_H264 => VIDEO_EXTRA_DATA_ID_AVC_DECODER_CONFIG,
+            CODEC_ID_HEVC => VIDEO_EXTRA_DATA_ID_HEVC_DECODER_CONFIG,
+            CODEC_ID_VP9 => VIDEO_EXTRA_DATA_ID_VP9_DECODER_CONFIG,
+            CODEC_ID_AV1 => VIDEO_EXTRA_DATA_ID_AV1_DECODER_CONFIG,
+            _ => VIDEO_EXTRA_DATA_ID_NULL,
         };
+        codec_params.add_extra_data(&[VideoExtraData {
+            id: extra_data_id,
+            data: codec_private,
+        }]);
     }
 
     Ok(Some(CodecParameters::Video(codec_params)))

@@ -33,6 +33,7 @@ use crate::atoms::{
 };
 use crate::fp::FpU16;
 
+use super::dvvc::DvvCAtom;
 use super::{AtomIterator, AvcCAtom, HvcCAtom};
 
 /// Sample description atom.
@@ -709,6 +710,18 @@ fn read_visual_sample_entry<B: ReadBytes>(
                     }
                     _ => {}
                 }
+            }
+            AtomType::DolbyVisionConfiguration => {
+                match codec_specific {
+                    Some(VisualCodecSpecific::Dvhe(ref mut hvccAtom))
+                    | Some(VisualCodecSpecific::Dvh1(ref mut hvccAtom))
+                    | Some(VisualCodecSpecific::Hev1(ref mut hvccAtom))
+                    | Some(VisualCodecSpecific::Hvc1(ref mut hvccAtom)) => {
+                        let dvvc = iter.read_atom::<DvvCAtom>()?;
+                        hvccAtom.extra_data.push(dvvc.extra_data);
+                    }
+                    _ => {}
+                };
             }
             _ => {
                 debug!("unknown visual sample entry sub-atom: {:?}.", entry_header.atom_type());

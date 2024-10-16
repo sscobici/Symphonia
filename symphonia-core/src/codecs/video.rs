@@ -136,8 +136,8 @@ impl VideoCodecParameters {
     }
 
     /// Adds codec's extra data.
-    pub fn add_extra_data(&mut self, data: VideoExtraData) -> &mut Self {
-        self.extra_data.push(data);
+    pub fn add_extra_data(&mut self, data: &[VideoExtraData]) -> &mut Self {
+        self.extra_data.extend(data.iter().cloned());
         self
     }
 }

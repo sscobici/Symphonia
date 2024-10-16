@@ -32,14 +32,14 @@ impl Atom for AvcCAtom {
             .data_len()
             .ok_or_else(|| Error::DecodeError("isomp4 (avcC): expected atom size to be known"))?;
 
-        let extra_data = VideoExtraData {
+        let avc_data = VideoExtraData {
             id: VIDEO_EXTRA_DATA_ID_AVC_DECODER_CONFIG,
             data: reader.read_boxed_slice_exact(len as usize)?,
         };
 
-        let avc_config = AVCDecoderConfigurationRecord::read(&extra_data.data)?;
+        let avc_config = AVCDecoderConfigurationRecord::read(&avc_data.data)?;
 
-        Ok(Self { extra_data, profile: avc_config.profile, level: avc_config.level })
+        Ok(Self { extra_data: avc_data, profile: avc_config.profile, level: avc_config.level })
     }
 }
 
@@ -49,6 +49,6 @@ impl AvcCAtom {
             .for_codec(CODEC_ID_H264)
             .with_profile(self.profile)
             .with_level(self.level)
-            .add_extra_data(self.extra_data.clone());
+            .add_extra_data(&[self.extra_data.clone()]);
     }
 }

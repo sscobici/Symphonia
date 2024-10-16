@@ -132,10 +132,10 @@ impl EsdsAtom {
 
         if let Some(ds_config) = &self.descriptor.dec_config.dec_specific_info {
             // Unknow extra data type.
-            codec_params.add_extra_data(VideoExtraData {
+            codec_params.add_extra_data(&[VideoExtraData {
                 id: VIDEO_EXTRA_DATA_ID_NULL,
                 data: ds_config.extra_data.clone(),
-            });
+            }]);
         }
 
         Ok(())
