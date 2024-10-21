@@ -17,6 +17,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
 use std::process::{Command, Stdio};
 
+use extra_data::VIDEO_EXTRA_DATA_ID_DOLBY_VISION_CONFIG;
 use symphonia::core::codecs::audio::well_known::*;
 use symphonia::core::codecs::subtitle::well_known::*;
 use symphonia::core::codecs::video::well_known::*;
@@ -26,6 +27,7 @@ use symphonia::core::formats::probe::Hint;
 use symphonia::core::formats::FormatOptions;
 use symphonia::core::io::MediaSourceStream;
 use symphonia::core::meta::MetadataOptions;
+use symphonia_common::mpeg::video::DOVIDecoderConfigurationRecord;
 
 pub fn build_mediainfo_command(path: &str) -> Command {
     let mut cmd = Command::new("mediainfo");
@@ -90,17 +92,17 @@ fn run_check_mediainfo(path: &str, opts: &TestOptions, result: &mut TestResult) 
 
     // print differences
     if is_different {
-        println!("    {:<50}{:<50}", "Expected:", "Actual:");
+        println!("    {:<50}\t{:<50}", "Expected:", "Actual:");
         for (expected, actual) in expected_lines.iter().zip(actual_lines.iter()) {
             if expected != actual {
                 // cut duration milliseconds before comparison, duration should be at the end
                 if expected.starts_with("General") {
                     if &expected[..expected.len() - 4] != actual {
-                        println!("*** {:<50}{:<50}", expected, actual);
+                        println!("*** {:<50}\t{:<50}", expected, actual);
                     }
                 }
                 else {
-                    println!("*** {:<50}{:<50}", expected, actual);
+                    println!("*** {:<50}\t{:<50}", expected, actual);
                 }
             }
         }
@@ -182,13 +184,26 @@ fn get_symphonia_mediainfo_output(path: &str, opts: &TestOptions) -> Result<Vec<
                 CODEC_ID_H264 => "AVC",
                 CODEC_ID_HEVC => "HEVC",
                 CODEC_ID_AV1 => "AV1",
+                CODEC_ID_VP9 => "VP9",
                 _ => "Unknown",
             };
+            let mut hdr = "";
+            for extra_data in &params.extra_data {
+                if extra_data.id == VIDEO_EXTRA_DATA_ID_DOLBY_VISION_CONFIG {
+                    if let Ok(config) = DOVIDecoderConfigurationRecord::read(&extra_data.data) {
+                        hdr = match config.dv_bl_signal_compatibility_id {
+                            1 | 6 => "Dolby Vision / SMPTE ST 2086",
+                            _ => "Dolby Vision",
+                        };
+                    }
+                }
+            }
             writeln!(
                 output,
-                "Video {},Format:{},Width:{},Height:{}",
+                "Video {},Format:{},HDR:{},Width:{},Height:{}",
                 track_nr,
                 format,
+                hdr,
                 params.width.unwrap(),
                 params.height.unwrap()
             )?;
