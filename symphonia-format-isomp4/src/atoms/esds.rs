@@ -5,7 +5,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use symphonia_core::codecs::audio::AudioCodecParameters;
 use symphonia_core::codecs::video::{VideoExtraData, VIDEO_EXTRA_DATA_ID_NULL};
 use symphonia_core::codecs::CodecId;
 use symphonia_core::errors::{decode_error, unsupported_error, Error, Result};
@@ -15,7 +14,7 @@ use crate::atoms::{Atom, AtomHeader};
 
 use log::{debug, warn};
 
-use super::stsd::VisualSampleEntry;
+use super::stsd::{AudioSampleEntry, VisualSampleEntry};
 
 const ES_DESCRIPTOR: u8 = 0x03;
 const DECODER_CONFIG_DESCRIPTOR: u8 = 0x04;
@@ -84,27 +83,22 @@ impl Atom for EsdsAtom {
 
 impl EsdsAtom {
     /// If the elementary stream descriptor describes an audio stream, populate the provided
-    /// audio codec parameters.
-    pub fn fill_audio_codec_params(&self, codec_params: &mut AudioCodecParameters) -> Result<()> {
-        use symphonia_core::codecs::audio::CODEC_ID_NULL_AUDIO;
-
+    /// audio sample entry.
+    pub fn fill_audio_sample_entry(&self, entry: &mut AudioSampleEntry) -> Result<()> {
         match get_codec_id_from_object_type(self.descriptor.dec_config.object_type_indication) {
             Some(CodecId::Audio(id)) => {
                 // Object type indication identified an audio codec.
-                codec_params.for_codec(id);
+                entry.codec_id = id;
             }
             Some(_) => {
                 // Object type indication identified a non-audio codec. This is unexpected.
                 return decode_error("isomp4 (esds): expected an audio codec type");
             }
-            None => {
-                // Unknown object type indication.
-                codec_params.for_codec(CODEC_ID_NULL_AUDIO);
-            }
+            None => {}
         }
 
         if let Some(ds_config) = &self.descriptor.dec_config.dec_specific_info {
-            codec_params.with_extra_data(ds_config.extra_data.clone());
+            entry.extra_data = Some(ds_config.extra_data.clone());
         }
 
         Ok(())
@@ -113,8 +107,6 @@ impl EsdsAtom {
     /// If the elementary stream descriptor describes an video stream, populate the provided
     /// video sample entry.
     pub fn fill_video_sample_entry(&self, entry: &mut VisualSampleEntry) -> Result<()> {
-        use symphonia_core::codecs::video::CODEC_ID_NULL_VIDEO;
-
         match get_codec_id_from_object_type(self.descriptor.dec_config.object_type_indication) {
             Some(CodecId::Video(id)) => {
                 // Object type indication identified an video codec.
@@ -124,10 +116,7 @@ impl EsdsAtom {
                 // Object type indication identified a non-video codec. This is unexpected.
                 return decode_error("isomp4 (esds): expected a video codec type");
             }
-            None => {
-                // Unknown object type indication.
-                entry.codec_id = CODEC_ID_NULL_VIDEO;
-            }
+            None => {}
         }
 
         if let Some(ds_config) = &self.descriptor.dec_config.dec_specific_info {

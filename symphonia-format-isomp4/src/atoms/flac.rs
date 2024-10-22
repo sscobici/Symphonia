@@ -6,7 +6,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use symphonia_core::codecs::audio::well_known::CODEC_ID_FLAC;
-use symphonia_core::codecs::audio::{AudioCodecParameters, VerificationCheck};
+use symphonia_core::codecs::audio::VerificationCheck;
 use symphonia_core::errors::{decode_error, unsupported_error, Result};
 use symphonia_core::io::{BufReader, ReadBytes};
 
@@ -15,6 +15,8 @@ use symphonia_common::xiph::audio::flac::metadata::{
 };
 
 use crate::atoms::{Atom, AtomHeader};
+
+use super::stsd::AudioSampleEntry;
 
 /// FLAC atom.
 #[allow(dead_code)]
@@ -59,16 +61,15 @@ impl Atom for FlacAtom {
 }
 
 impl FlacAtom {
-    pub fn fill_codec_params(&self, codec_params: &mut AudioCodecParameters) {
-        codec_params
-            .for_codec(CODEC_ID_FLAC)
-            .with_sample_rate(self.stream_info.sample_rate)
-            .with_bits_per_sample(self.stream_info.bits_per_sample)
-            .with_channels(self.stream_info.channels.clone())
-            .with_extra_data(self.extra_data.clone());
+    pub fn fill_audio_sample_entry(&self, entry: &mut AudioSampleEntry) {
+        entry.codec_id = CODEC_ID_FLAC;
+        entry.sample_rate = self.stream_info.sample_rate;
+        entry.bits_per_sample = Some(self.stream_info.bits_per_sample);
+        entry.channels = Some(self.stream_info.channels.clone());
+        entry.extra_data = Some(self.extra_data.clone());
 
         if let Some(md5) = self.stream_info.md5 {
-            codec_params.with_verification_code(VerificationCheck::Md5(md5));
+            entry.verification_check = Some(VerificationCheck::Md5(md5));
         }
     }
 }
