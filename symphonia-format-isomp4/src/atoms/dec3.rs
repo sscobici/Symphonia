@@ -6,11 +6,12 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use symphonia_core::codecs::audio::well_known::CODEC_ID_EAC3;
-use symphonia_core::codecs::audio::AudioCodecParameters;
 use symphonia_core::errors::{Error, Result};
 use symphonia_core::io::ReadBytes;
 
 use crate::atoms::{Atom, AtomHeader};
+
+use super::stsd::AudioSampleEntry;
 
 #[allow(dead_code)]
 #[derive(Debug)]
@@ -33,7 +34,8 @@ impl Atom for Dec3Atom {
 }
 
 impl Dec3Atom {
-    pub fn fill_codec_params(&self, codec_params: &mut AudioCodecParameters) {
-        codec_params.for_codec(CODEC_ID_EAC3).with_extra_data(self.extra_data.clone());
+    pub fn fill_audio_sample_entry(&self, entry: &mut AudioSampleEntry) {
+        entry.codec_id = CODEC_ID_EAC3;
+        entry.extra_data = Some(self.extra_data.clone());
     }
 }

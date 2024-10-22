@@ -5,11 +5,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use symphonia_core::codecs::audio::{well_known::CODEC_ID_OPUS, AudioCodecParameters};
+use symphonia_core::codecs::audio::well_known::CODEC_ID_OPUS;
 use symphonia_core::errors::{decode_error, unsupported_error, Error, Result};
 use symphonia_core::io::ReadBytes;
 
 use crate::atoms::{Atom, AtomHeader};
+
+use super::stsd::AudioSampleEntry;
 
 /// Opus atom.
 #[allow(dead_code)]
@@ -64,7 +66,8 @@ impl Atom for OpusAtom {
 }
 
 impl OpusAtom {
-    pub fn fill_codec_params(&self, codec_params: &mut AudioCodecParameters) {
-        codec_params.for_codec(CODEC_ID_OPUS).with_extra_data(self.extra_data.clone());
+    pub fn fill_audio_sample_entry(&self, entry: &mut AudioSampleEntry) {
+        entry.codec_id = CODEC_ID_OPUS;
+        entry.extra_data = Some(self.extra_data.clone());
     }
 }

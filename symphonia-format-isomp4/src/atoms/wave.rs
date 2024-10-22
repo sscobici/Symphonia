@@ -10,7 +10,7 @@ use symphonia_core::io::ReadBytes;
 
 use crate::atoms::{Atom, AtomHeader, EsdsAtom};
 
-use super::{AtomIterator, AtomType};
+use super::{stsd::AudioSampleEntry, AtomIterator, AtomType};
 
 #[allow(dead_code)]
 #[derive(Debug)]
@@ -31,5 +31,15 @@ impl Atom for WaveAtom {
         }
 
         Ok(WaveAtom { esds })
+    }
+}
+
+impl WaveAtom {
+    pub fn fill_audio_sample_entry(&self, entry: &mut AudioSampleEntry) -> Result<()> {
+        if let Some(esds) = &self.esds {
+            esds.fill_audio_sample_entry(entry)?;
+        }
+
+        Ok(())
     }
 }
