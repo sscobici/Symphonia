@@ -112,77 +112,10 @@ impl StsdAtom {
     pub fn make_codec_params(&self) -> Option<CodecParameters> {
         // Audio sample entry.
         match &self.sample_entry {
-            SampleEntry::Audio(entry) => {
-                let mut codec_params = AudioCodecParameters::new();
-
-                // General audio parameters.
-                codec_params.with_sample_rate(entry.sample_rate as u32);
-
-                // Codec-specific parameters.
-                match entry.codec_specific {
-                    Some(AudioCodecSpecific::Esds(ref esds)) => {
-                        // ESDS is not an audio specific atom. Returns an error if not an audio
-                        // elementary stream.
-                        esds.fill_audio_codec_params(&mut codec_params).ok()?;
-                    }
-                    Some(AudioCodecSpecific::Ac3(ref dac3)) => {
-                        dac3.fill_codec_params(&mut codec_params);
-                    }
-                    Some(AudioCodecSpecific::Alac(ref alac)) => {
-                        alac.fill_codec_params(&mut codec_params);
-                    }
-                    Some(AudioCodecSpecific::Eac3(ref dec3)) => {
-                        dec3.fill_codec_params(&mut codec_params);
-                    }
-                    Some(AudioCodecSpecific::Flac(ref flac)) => {
-                        flac.fill_codec_params(&mut codec_params);
-                    }
-                    Some(AudioCodecSpecific::Opus(ref opus)) => {
-                        opus.fill_codec_params(&mut codec_params);
-                    }
-                    Some(AudioCodecSpecific::Mp3) => {
-                        codec_params.for_codec(CODEC_ID_MP3);
-                    }
-                    Some(AudioCodecSpecific::Pcm(ref pcm)) => {
-                        // PCM codecs.
-                        codec_params
-                            .for_codec(pcm.codec_id)
-                            .with_bits_per_coded_sample(pcm.bits_per_coded_sample)
-                            .with_bits_per_sample(pcm.bits_per_sample)
-                            .with_max_frames_per_packet(pcm.frames_per_packet)
-                            .with_channels(pcm.channels.clone());
-                    }
-                    _ => (),
-                }
-
-                Some(CodecParameters::Audio(codec_params))
-            }
-            SampleEntry::Visual(entry) => {
-                let mut codec_params = VideoCodecParameters {
-                    width: Some(entry.width),
-                    height: Some(entry.height),
-                    codec: entry.codec_id,
-                    extra_data: entry.extra_data.clone(),
-                    ..Default::default()
-                };
-
-                if let Some(profile) = entry.profile {
-                    codec_params.with_profile(profile);
-                }
-                if let Some(level) = entry.level {
-                    codec_params.with_level(level);
-                }
-
-                Some(CodecParameters::Video(codec_params))
-            }
+            SampleEntry::Audio(entry) => Some(CodecParameters::Audio(entry.make_codec_params())),
+            SampleEntry::Visual(entry) => Some(CodecParameters::Video(entry.make_codec_params())),
             SampleEntry::Subtitle(entry) => {
-                let mut codec_params = SubtitleCodecParameters::new();
-
-                if let Some(SubtitleCodecSpecific::TimedText) = entry.codec_specific {
-                    codec_params.for_codec(CODEC_ID_MOV_TEXT);
-                }
-
-                Some(CodecParameters::Subtitle(codec_params))
+                Some(CodecParameters::Subtitle(entry.make_codec_params()))
             }
             _ => None,
         }
@@ -239,6 +172,53 @@ pub struct AudioSampleEntry {
     pub codec_specific: Option<AudioCodecSpecific>,
 }
 
+impl AudioSampleEntry {
+    pub(crate) fn make_codec_params(&self) -> AudioCodecParameters {
+        let mut codec_params = AudioCodecParameters::new();
+
+        // General audio parameters.
+        codec_params.with_sample_rate(self.sample_rate as u32);
+
+        // Codec-specific parameters.
+        match self.codec_specific {
+            Some(AudioCodecSpecific::Esds(ref esds)) => {
+                // ESDS is not an audio specific atom. Returns an error if not an audio
+                // elementary stream.
+                esds.fill_audio_codec_params(&mut codec_params).ok();
+            }
+            Some(AudioCodecSpecific::Ac3(ref dac3)) => {
+                dac3.fill_codec_params(&mut codec_params);
+            }
+            Some(AudioCodecSpecific::Alac(ref alac)) => {
+                alac.fill_codec_params(&mut codec_params);
+            }
+            Some(AudioCodecSpecific::Eac3(ref dec3)) => {
+                dec3.fill_codec_params(&mut codec_params);
+            }
+            Some(AudioCodecSpecific::Flac(ref flac)) => {
+                flac.fill_codec_params(&mut codec_params);
+            }
+            Some(AudioCodecSpecific::Opus(ref opus)) => {
+                opus.fill_codec_params(&mut codec_params);
+            }
+            Some(AudioCodecSpecific::Mp3) => {
+                codec_params.for_codec(CODEC_ID_MP3);
+            }
+            Some(AudioCodecSpecific::Pcm(ref pcm)) => {
+                // PCM codecs.
+                codec_params
+                    .for_codec(pcm.codec_id)
+                    .with_bits_per_coded_sample(pcm.bits_per_coded_sample)
+                    .with_bits_per_sample(pcm.bits_per_sample)
+                    .with_max_frames_per_packet(pcm.frames_per_packet)
+                    .with_channels(pcm.channels.clone());
+            }
+            _ => (),
+        }
+
+        codec_params
+    }
+}
 /// Gets if the sample entry atom is for a PCM codec.
 fn is_pcm_codec(atype: AtomType) -> bool {
     // PCM data in version 0 and 1 is signalled by the sample entry atom type. In version 2, the
@@ -600,6 +580,27 @@ pub struct VisualSampleEntry {
     pub extra_data: Vec<VideoExtraData>,
 }
 
+impl VisualSampleEntry {
+    pub(crate) fn make_codec_params(&self) -> VideoCodecParameters {
+        let mut codec_params = VideoCodecParameters {
+            width: Some(self.width),
+            height: Some(self.height),
+            codec: self.codec_id,
+            extra_data: self.extra_data.clone(),
+            ..Default::default()
+        };
+
+        if let Some(profile) = self.profile {
+            codec_params.with_profile(profile);
+        }
+        if let Some(level) = self.level {
+            codec_params.with_level(level);
+        }
+
+        codec_params
+    }
+}
+
 fn read_visual_sample_entry<B: ReadBytes>(
     reader: &mut B,
     header: AtomHeader,
@@ -687,6 +688,18 @@ pub struct SubtitleSampleEntry {
     btrt: Option<BtrtAtom>,
     txtc: Option<TxtcAtom>,
     codec_specific: Option<SubtitleCodecSpecific>,
+}
+
+impl SubtitleSampleEntry {
+    pub(crate) fn make_codec_params(&self) -> SubtitleCodecParameters {
+        let mut codec_params = SubtitleCodecParameters::new();
+
+        if let Some(SubtitleCodecSpecific::TimedText) = self.codec_specific {
+            codec_params.for_codec(CODEC_ID_MOV_TEXT);
+        }
+
+        codec_params
+    }
 }
 
 fn read_subtitle_sample_entry<B: ReadBytes>(
