@@ -1,0 +1,8 @@
+[package]
+name = "symphonia-play-video"
+version = "0.5.4"
+
+[dependencies]
+objc = "0.2.7"
+cocoa = "0.26.0"
+symphonia-core = { version = "0.5.4", path = "../symphonia-core" }
