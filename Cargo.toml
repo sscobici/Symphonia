@@ -20,5 +20,6 @@ members = [
     "symphonia-format-riff",
     "symphonia-metadata",
     "symphonia-play",
+    "symphonia-play-video",
     "symphonia-check",
 ]
