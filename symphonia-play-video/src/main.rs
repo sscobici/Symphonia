@@ -86,6 +86,7 @@ const kCMVideoCodecType_DolbyVisionHEVC: u32 = 0x64766831; // FourCC for HEVC ('
 fn main() {
     // mp4 NALU -> CMSampleBuffer -> AVSampleBufferDisplayLayer
     unsafe {
+        println!("-------------- START -------------");
         let _pool = NSAutoreleasePool::new(nil);
 
         // Initialize Cocoa app
@@ -151,6 +152,7 @@ fn start_loop(display_layer: *mut Object, format: Box<dyn FormatReader>) {
         // Find the first video track
         let track = format.default_track(TrackType::Video).expect("no video track");
         let track_id = track.id;
+        let track_timescale= track.time_base.unwrap().denom as i32;
         let mut hvcc_data: &[u8] = &[];
         let mut dvcc_data: &[u8] = &[];
         if let Some(CodecParameters::Video(params)) = &track.codec_params {
@@ -215,13 +217,11 @@ fn start_loop(display_layer: *mut Object, format: Box<dyn FormatReader>) {
         let display_layer_cell = RefCell::new(display_layer);
 
         let callback = move || {
-            println!("Called .... ");
+            let mut sent = 0;
             let display_layer = *display_layer_cell.borrow().deref();
             let mut format = format_cell.borrow_mut();
             // Check if the display layer is ready for more data
-            let mut is_ready = true;
-            while is_ready {
-                is_ready = msg_send![display_layer, isReadyForMoreMediaData];
+            while msg_send![display_layer, isReadyForMoreMediaData] {
                 let mut packet = None;
                 loop {
                     match format.next_packet() {
@@ -254,8 +254,8 @@ fn start_loop(display_layer: *mut Object, format: Box<dyn FormatReader>) {
 
          //println!("{}", CFString::wrap_under_get_rule(CFCopyDescription(format_description)));
                 let timing_info = CMSampleTimingInfo {
-                    duration: CMTimeMake(1, 30),  // e.g., 30 fps
-                    presentationTimeStamp: CMTimeMake(2, 1),  // Presentation time
+                    duration: CMTimeMake(packet.ts as i64, track_timescale),  // e.g., 30 fps
+                    presentationTimeStamp: CMTimeMake(packet.dur as i64, track_timescale),  // Presentation time
                     decodeTimeStamp: kCMTimeInvalid, // Use `kCMTimeInvalid` if no decode timestamp is needed
                 };
 
@@ -271,9 +271,11 @@ fn start_loop(display_layer: *mut Object, format: Box<dyn FormatReader>) {
                     std::ptr::null_mut(),
                     &mut sample_buffer,
                 );
-
+                
                 let _: () = msg_send![display_layer, enqueueSampleBuffer: sample_buffer];
+                sent += 1;
             }
+            println!("SENT .... {}", sent);
         };
 
         let callback_block = ConcreteBlock::new(callback);
