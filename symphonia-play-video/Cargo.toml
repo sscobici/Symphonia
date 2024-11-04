@@ -4,5 +4,9 @@ version = "0.5.4"
 
 [dependencies]
 objc = "0.2.7"
+dispatch = "0.2.0"
+block = "0.1.6"
 cocoa = "0.26.0"
-symphonia-core = { version = "0.5.4", path = "../symphonia-core" }
+core-foundation = "0.10"
+core-media = "0.5.1"
+symphonia = { version = "0.5.4", path = "../symphonia", features = ["all", "opt-simd"] }
