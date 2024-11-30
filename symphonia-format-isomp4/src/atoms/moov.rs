@@ -15,8 +15,6 @@ use crate::atoms::{
 
 use log::warn;
 
-use super::tkhd;
-
 /// Movie atom.
 #[allow(dead_code)]
 #[derive(Debug)]
@@ -88,7 +86,7 @@ impl Atom for MoovAtom {
         }
 
         let mvhd = mvhd.unwrap();
-        for mut trak in traks.iter_mut() {
+        for trak in traks.iter_mut() {
             if trak.mdia.mdhd.duration == 0 {
                 trak.mdia.mdhd.duration = trak.tkhd.duration * trak.mdia.mdhd.timescale as u64 / mvhd.timescale as u64;
             }
