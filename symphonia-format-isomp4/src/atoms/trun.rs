@@ -29,6 +29,8 @@ pub struct TrunAtom {
     pub sample_size: Vec<u32>,
     /// Sample flags for each sample in this run.
     pub sample_flags: Vec<u32>,
+    /// Sample composition time offset for each sample in this run.
+    pub sample_composition_time_offset: Vec<i32>,
     /// The total size of all samples in this run. 0 if the sample size flag is not set.
     total_sample_size: u64,
     /// The total duration of all samples in this run. 0 if the sample duration flag is not set.
@@ -117,7 +119,7 @@ impl TrunAtom {
 
     /// Get the timestamp and duration of a sample. The desired sample is specified by the
     /// trun-relative sample number, `sample_num_rel`.
-    pub fn sample_timing(&self, sample_num_rel: u32, default_dur: u32) -> (u64, u32) {
+    pub fn sample_timing(&self, sample_num_rel: u32, default_dur: u32) -> (u64, u64, u32) {
         debug_assert!(sample_num_rel < self.sample_count);
 
         if self.is_sample_duration_present() {
@@ -134,7 +136,7 @@ impl TrunAtom {
 
             let dur = self.sample_duration[sample_num_rel as usize];
 
-            (ts, dur)
+            (ts, 0, dur)
         }
         else {
             // The duration of all samples in the track fragment are not unique.
@@ -148,7 +150,12 @@ impl TrunAtom {
                 u64::from(sample_num_rel) * u64::from(default_dur)
             };
 
-            (ts, default_dur)
+            if self.are_sample_composition_time_offsets_present() {
+                (ts, (ts as i64).wrapping_add(self.sample_composition_time_offset[sample_num_rel as usize] as i64) as u64, default_dur)
+            }
+            else {
+                (ts, 0, default_dur)
+            }
         }
     }
 
@@ -269,6 +276,7 @@ impl Atom for TrunAtom {
         let mut sample_duration = Vec::new();
         let mut sample_size = Vec::new();
         let mut sample_flags = Vec::new();
+        let mut sample_composition_time_offset = Vec::new();
 
         let mut total_sample_size = 0;
         let mut total_sample_duration = 0;
@@ -295,7 +303,8 @@ impl Atom for TrunAtom {
             if (flags & TrunAtom::SAMPLE_COMPOSITION_TIME_OFFSETS_PRESENT) != 0 {
                 // For version 0, this is a u32.
                 // For version 1, this is a i32.
-                let _ = reader.read_be_u32()?;
+                sample_composition_time_offset.push(reader.read_be_i32()?);
+                // let _ = reader.read_be_u32()?;
             }
         }
 
@@ -307,6 +316,7 @@ impl Atom for TrunAtom {
             sample_duration,
             sample_size,
             sample_flags,
+            sample_composition_time_offset,
             total_sample_size,
             total_sample_duration,
         })

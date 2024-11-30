@@ -24,8 +24,10 @@ pub struct SampleDataDesc {
 
 /// Timing information for one sample.
 pub struct SampleTiming {
-    /// The timestamp of the sample.
+    /// The timestamp of the sample. For video it is dts
     pub ts: u64,
+    /// The presentation timestamp of the sample. For video it can be different from ts (dts)
+    pub pts: u64,
     /// The duration of the sample.
     pub dur: u32,
 }
@@ -146,7 +148,7 @@ impl StreamSegment for MoofSegment {
             }
 
             // If a track does NOT end in this segment, then this cannot be the last segment.
-            if seq.first_ts + seq.total_sample_duration < trak.duration {
+            if seq.first_ts + seq.total_sample_duration < trak.mdia.mdhd.duration {
                 return false;
             }
         }
@@ -174,8 +176,8 @@ impl StreamSegment for MoofSegment {
             // If the sample is contained within the this track run, get the timing of of the
             // sample.
             if sample_num_rel < trun.sample_count {
-                let (ts, dur) = trun.sample_timing(sample_num_rel, default_dur);
-                return Ok(Some(SampleTiming { ts: trun_ts_offset + ts, dur }));
+                let (ts, pts, dur) = trun.sample_timing(sample_num_rel, default_dur);
+                return Ok(Some(SampleTiming { ts: trun_ts_offset + ts, pts: trun_ts_offset + pts, dur }));
             }
 
             let trun_dur = trun.total_duration(default_dur);
@@ -349,7 +351,7 @@ impl StreamSegment for MoovSegment {
     fn all_tracks_ended(&self) -> bool {
         // If a track does not end in this segment, then this cannot be the last segment.
         for trak in &self.moov.traks {
-            if trak.mdia.minf.stbl.stts.total_duration < trak.duration {
+            if trak.mdia.minf.stbl.stts.total_duration == 0 || trak.mdia.minf.stbl.stts.total_duration < trak.duration {
                 return false;
             }
         }
@@ -367,7 +369,7 @@ impl StreamSegment for MoovSegment {
         let timing = trak.mdia.minf.stbl.stts.find_timing_for_sample(sample_num);
 
         if let Some((ts, dur)) = timing {
-            Ok(Some(SampleTiming { ts, dur }))
+            Ok(Some(SampleTiming { ts, pts: 0, dur }))
         }
         else {
             Ok(None)

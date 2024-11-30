@@ -58,7 +58,7 @@ impl Atom for TrakAtom {
         };
 
         let duration =
-            if mdia_atom.mdhd.duration != 0 { mdia_atom.mdhd.duration } else { tkhd_atom.duration };
+            if mdia_atom.mdhd.duration != 0 { mdia_atom.mdhd.duration } else { 0 };
 
         Ok(TrakAtom { tkhd: tkhd_atom, edts, mdia: mdia_atom, duration })
     }

@@ -56,7 +56,7 @@ impl TrackState {
 
         track
             .with_time_base(TimeBase::new(1, trak.mdia.mdhd.timescale))
-            .with_num_frames(trak.duration);
+            .with_num_frames(trak.mdia.mdhd.duration);
 
         track
     }
@@ -67,8 +67,10 @@ impl TrackState {
 struct NextSampleInfo {
     /// The track number of the next sample.
     track_num: usize,
-    /// The timestamp of the next sample.
+    /// The timestamp of the next sample. For video sample it means dts (decoding timestamp)
     ts: u64,
+    /// The presentation timestamp of the next sample. It might be different from ts (dts)
+    pts: u64,
     /// The timestamp expressed in seconds.
     time: Time,
     /// The duration of the next sample.
@@ -282,7 +284,7 @@ impl<'s> IsoMp4Reader<'s> {
                     // Compare the presentation time of the sample from this track to other tracks,
                     // and select the track with the earliest presentation time.
                     match earliest {
-                        Some(NextSampleInfo { track_num: _, ts: _, time, dur: _, seg_idx: _ })
+                        Some(NextSampleInfo { track_num: _, ts: _, pts: _, time, dur: _, seg_idx: _ })
                             if time <= sample_time =>
                         {
                             // Earliest is less than or equal to the track's next sample
@@ -294,6 +296,7 @@ impl<'s> IsoMp4Reader<'s> {
                             earliest = Some(NextSampleInfo {
                                 track_num: state.track_num,
                                 ts: timing.ts,
+                                pts: timing.pts,
                                 time: sample_time,
                                 dur: timing.dur,
                                 seg_idx: seg_idx_delta + state.cur_seg,
@@ -547,9 +550,10 @@ impl FormatReader for IsoMp4Reader<'_> {
             }
         }
 
-        Ok(Some(Packet::new_from_boxed_slice(
+        Ok(Some(Packet::new_from_boxed_slice_video(
             next_sample_info.track_num as u32,
             next_sample_info.ts,
+            next_sample_info.pts,
             u64::from(next_sample_info.dur),
             reader.read_boxed_slice_exact(sample_info.len as usize)?,
         )))

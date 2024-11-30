@@ -386,10 +386,12 @@ pub struct Packet {
     /// The track ID.
     track_id: u32,
     /// The timestamp of the packet. When gapless support is enabled, this timestamp is relative to
-    /// the end of the encoder delay.
+    /// the end of the encoder delay. For video track this corresponds to dts (decoding timestamp)
     ///
     /// This timestamp is in `TimeBase` units.
     pub ts: u64,
+    /// The presentation timestamp of the packet, For video track this can be different from ts (dts)
+    pub pts: u64, 
     /// The duration of the packet. When gapless support is enabled, the duration does not include
     /// the encoder delay or padding.
     ///
@@ -408,12 +410,17 @@ pub struct Packet {
 impl Packet {
     /// Create a new `Packet` from a slice.
     pub fn new_from_slice(track_id: u32, ts: u64, dur: u64, buf: &[u8]) -> Self {
-        Packet { track_id, ts, dur, trim_start: 0, trim_end: 0, data: Box::from(buf) }
+        Packet { track_id, ts, pts: 0, dur, trim_start: 0, trim_end: 0, data: Box::from(buf) }
     }
 
     /// Create a new `Packet` from a boxed slice.
     pub fn new_from_boxed_slice(track_id: u32, ts: u64, dur: u64, data: Box<[u8]>) -> Self {
-        Packet { track_id, ts, dur, trim_start: 0, trim_end: 0, data }
+        Packet { track_id, ts, pts: 0, dur, trim_start: 0, trim_end: 0, data }
+    }
+
+    /// Create a new `Packet` from a boxed slice.
+    pub fn new_from_boxed_slice_video(track_id: u32, ts: u64, pts: u64, dur: u64, data: Box<[u8]>) -> Self {
+        Packet { track_id, ts, pts, dur, trim_start: 0, trim_end: 0, data }
     }
 
     /// Create a new `Packet` with trimming information from a slice.
@@ -425,7 +432,7 @@ impl Packet {
         trim_end: u32,
         buf: &[u8],
     ) -> Self {
-        Packet { track_id, ts, dur, trim_start, trim_end, data: Box::from(buf) }
+        Packet { track_id, ts, pts: 0, dur, trim_start, trim_end, data: Box::from(buf) }
     }
 
     /// Create a new `Packet` with trimming information from a boxed slice.
@@ -437,7 +444,7 @@ impl Packet {
         trim_end: u32,
         data: Box<[u8]>,
     ) -> Self {
-        Packet { track_id, ts, dur, trim_start, trim_end, data }
+        Packet { track_id, ts, pts: 0, dur, trim_start, trim_end, data }
     }
 
     /// The track identifier of the track this packet belongs to.
