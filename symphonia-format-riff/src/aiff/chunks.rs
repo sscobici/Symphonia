@@ -152,12 +152,7 @@ impl ParseChunk for CommonChunk {
         let sample_rate = Extended::from_be_bytes(sample_rate);
         let sample_rate = sample_rate.to_f64() as u32;
 
-        let format_data = Self::read_pcm_fmt(sample_size as u16, n_channels as u16);
-
-        let format_data = match format_data {
-            Ok(data) => data,
-            Err(e) => return Err(e),
-        };
+        let format_data = Self::read_pcm_fmt(sample_size as u16, n_channels as u16)?;
 
         Ok(CommonChunk { n_channels, n_sample_frames, sample_size, sample_rate, format_data })
     }
@@ -237,18 +232,13 @@ impl CommonChunkParser for ChunkParser<CommonChunk> {
         }
 
         let format_data = match &compression_type {
-            b"none" | b"NONE" => CommonChunk::read_pcm_fmt(sample_size as u16, n_channels as u16),
-            b"alaw" | b"ALAW" => CommonChunk::read_alaw_pcm_fmt(n_channels as u16),
-            b"ulaw" | b"ULAW" => CommonChunk::read_mulaw_pcm_fmt(n_channels as u16),
-            b"fl32" | b"fl64" => CommonChunk::read_ieee_fmt(sample_size as u16, n_channels as u16),
-            b"sowt" | b"SOWT" => CommonChunk::read_sowt_fmt(sample_size as u16, n_channels as u16),
-            b"twos" | b"TWOS" => CommonChunk::read_twos_fmt(sample_size as u16, n_channels as u16),
+            b"none" | b"NONE" => CommonChunk::read_pcm_fmt(sample_size as u16, n_channels as u16)?,
+            b"alaw" | b"ALAW" => CommonChunk::read_alaw_pcm_fmt(n_channels as u16)?,
+            b"ulaw" | b"ULAW" => CommonChunk::read_mulaw_pcm_fmt(n_channels as u16)?,
+            b"fl32" | b"fl64" => CommonChunk::read_ieee_fmt(sample_size as u16, n_channels as u16)?,
+            b"sowt" | b"SOWT" => CommonChunk::read_sowt_fmt(sample_size as u16, n_channels as u16)?,
+            b"twos" | b"TWOS" => CommonChunk::read_twos_fmt(sample_size as u16, n_channels as u16)?,
             _ => return unsupported_error("aifc: Compression type not implemented"),
-        };
-
-        let format_data = match format_data {
-            Ok(data) => data,
-            Err(e) => return Err(e),
         };
 
         Ok(CommonChunk { n_channels, n_sample_frames, sample_size, sample_rate, format_data })
