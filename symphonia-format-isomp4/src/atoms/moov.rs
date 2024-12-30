@@ -81,7 +81,7 @@ impl Atom for MoovAtom {
                 let found = mvex.trexs.iter().any(|trex| trex.track_id == trak.tkhd.id);
 
                 if !found {
-                    warn!("missing trex atom for trak with id={}", trak.tkhd.id);
+                    warn!("isomp4 (moov): missing trex atom for trak with id={}", trak.tkhd.id);
                 }
             }
         }
