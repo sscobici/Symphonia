@@ -32,7 +32,7 @@ use symphonia::core::formats::{FormatReader, Track};
 use symphonia::core::io::MediaSourceStream;
 use symphonia::core::meta::MetadataOptions;
 mod mediainfo;
-use crate::{InfoTestDecoder, InfoTestOptions, RefProcess};
+use crate::{get_codec_type, InfoTestDecoder, InfoTestOptions, RefProcess};
 
 const EMPTY: &str = "---";
 
@@ -296,18 +296,6 @@ fn equal_codec_params_type(expected: &Track, actual: &Track) -> bool {
             | (Some(CodecParameters::Subtitle(_)), Some(CodecParameters::Subtitle(_)))
             | (None, None)
     )
-}
-
-fn get_codec_type(index: usize, codec_params: &Option<CodecParameters>) -> &str {
-    match codec_params {
-        Some(CodecParameters::Video(_)) => "Video",
-        Some(CodecParameters::Audio(_)) => "Audio",
-        Some(CodecParameters::Subtitle(_)) => "Text",
-        _ => {
-            println!("info: cannot detect CodecParameters type, for track_id: {}", index);
-            "Unknown"
-        }
-    }
 }
 
 fn print_lines(lines: &Vec<Line>) {

@@ -18,10 +18,12 @@ use audio::run_audio;
 use clap::{Parser, Subcommand, ValueEnum};
 use info::run_info;
 use log::warn;
-use symphonia::core::errors::{Error, Result};
+use symphonia::core::{codecs::CodecParameters, errors::{Error, Result}};
+use video::run_video;
 
 mod audio;
 mod info;
+mod video;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -42,6 +44,9 @@ enum CheckMode {
 
     /// Check Symphonia audio output with a reference decoder (ffmpeg or other)
     Audio(AudioTestOptions),
+
+    /// Check Symphonia video output with a reference decoder (ffprobe)
+    Video(VideoTestOptions),
 }
 
 #[derive(Parser, Debug)]
@@ -86,6 +91,21 @@ struct AudioTestOptions {
     input: String,
 }
 
+#[derive(Parser, Debug)]
+struct VideoTestOptions {
+    /// Only print test results
+    #[arg(long = "quiet", short = 'q')]
+    is_quiet: bool,
+
+    /// Specify a particular decoder to be used as the reference
+    #[arg(long = "ref", value_enum, default_value = "ffprobe")]
+    ref_decoder: VideoTestDecoder,
+
+    /// The input file path
+    #[arg(required = true)]
+    input: String,
+}
+
 #[derive(ValueEnum, Clone, Debug)]
 enum AudioTestDecoder {
     Ffmpeg,
@@ -97,6 +117,11 @@ enum AudioTestDecoder {
 #[derive(ValueEnum, Clone, Debug)]
 enum InfoTestDecoder {
     Mediainfo,
+}
+
+#[derive(ValueEnum, Clone, Debug)]
+enum VideoTestDecoder {
+    Ffprobe,
 }
 
 struct RefProcess {
@@ -120,6 +145,19 @@ impl RefProcess {
     }
 }
 
+
+fn get_codec_type(index: usize, codec_params: &Option<CodecParameters>) -> &str {
+    match codec_params {
+        Some(CodecParameters::Video(_)) => "Video",
+        Some(CodecParameters::Audio(_)) => "Audio",
+        Some(CodecParameters::Subtitle(_)) => "Text",
+        _ => {
+            println!("info: cannot detect CodecParameters type, for track_id: {}", index);
+            "Unknown"
+        }
+    }
+}
+
 fn main() {
     pretty_env_logger::init();
     let cli = Cli::parse();
@@ -132,6 +170,10 @@ fn main() {
         CheckMode::Audio(options) => {
             println!("Input Path: {}", options.input);
             run_audio(options)
+        }
+        CheckMode::Video(options) => {
+            println!("Input Path: {}", options.input);
+            run_video(options)
         }
     };
 
