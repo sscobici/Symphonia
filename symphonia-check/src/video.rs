@@ -34,14 +34,8 @@ const VIDEO: &str = "video";
 
 #[derive(Default)]
 struct VideoTestResult {
-    n_frames: u64,
-    n_samples: u64,
-    n_failed_samples: u64,
     n_packets: u64,
     n_failed_packets: u64,
-    abs_max_delta: f32,
-    tgt_unchecked_samples: u64,
-    ref_unchecked_samples: u64,
 }
 
 fn build_ffprobe_command(path: &str) -> Command {
@@ -170,6 +164,8 @@ fn run_test(path: &str, opts: &VideoTestOptions, result: &mut VideoTestResult) -
             }
         };
 
+        result.n_packets += 1;
+
         let codec_param = match format.tracks().get(act.track_id() as usize - 1) {
             Some(tr) => &tr.codec_params,
             _ => &None,
@@ -178,16 +174,17 @@ fn run_test(path: &str, opts: &VideoTestOptions, result: &mut VideoTestResult) -
         let different = match (exp.codec_type.as_str(), codec_param) {
             (AUDIO, Some(CodecParameters::Audio(_))) |
             (VIDEO, Some(CodecParameters::Video(_))) => { 
-                // valid conbinations, packet
-                exp.pts != act.ts || exp.dts != act.ts
+                // valid conbinations, compare packet data
+                exp.pts != act.pts || exp.dts != act.dts
             }
             _ => true,
         };
 
         if different {
+            result.n_failed_packets += 1;
             println!("FAIL");
-            println!("\tExpected: codec_type: {}, pts: {:<10} dts: {:<10}", exp.codec_type, exp.pts, exp.dts);
-            println!("\t  Actual: codec_type: {}, pts: {:<10} dts: {:<10}", get_codec_type(act.track_id() as usize, codec_param), act.ts, act.ts);
+            println!("\tExpected: codec_type: {}, dts: {:<10} pts: {:<10}", exp.codec_type, exp.dts, exp.pts);
+            println!("\t  Actual: codec_type: {}, dts: {:<10} pts: {:<10}", get_codec_type(act.track_id() as usize, codec_param), act.dts, act.pts);
         }
     }
 
@@ -207,18 +204,12 @@ pub fn run_video(opts: VideoTestOptions) -> Result<()> {
     println!("=================================================");
     println!();
     println!("  Failed/Total Packets: {:>12}/{:>12}", res.n_failed_packets, res.n_packets);
-    println!("  Failed/Total Samples: {:>12}/{:>12}", res.n_failed_samples, res.n_samples);
-    println!();
-    println!("  Remaining Target Samples:          {:>12}", res.tgt_unchecked_samples);
-    println!("  Remaining Reference Samples:       {:>12}", res.ref_unchecked_samples);
-    println!();
-    println!("  Absolute Maximum Sample Delta:       {:.8}", res.abs_max_delta);
     println!();
 
-    if res.n_failed_samples == 0 {
+    if res.n_failed_packets == 0 {
         Ok(())
     }
     else {
-        unsupported_error("Some samples didn't pass validation")
+        unsupported_error("Some packet didn't pass validation")
     }
 }
