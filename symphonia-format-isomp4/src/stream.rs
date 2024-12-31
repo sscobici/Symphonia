@@ -24,8 +24,10 @@ pub struct SampleDataDesc {
 
 /// Timing information for one sample.
 pub struct SampleTiming {
-    /// The timestamp of the sample.
-    pub ts: u64,
+    /// The PTS (Presenting Timestamp) of the sample.
+    pub pts: u64,
+    /// The DTS (Decoding Timestamp) of the sample.
+    pub dts: i64,
     /// The duration of the sample.
     pub dur: u32,
 }
@@ -174,8 +176,12 @@ impl StreamSegment for MoofSegment {
             // If the sample is contained within the this track run, get the timing of of the
             // sample.
             if sample_num_rel < trun.sample_count {
-                let (ts, dur) = trun.sample_timing(sample_num_rel, default_dur);
-                return Ok(Some(SampleTiming { ts: trun_ts_offset + ts, dur }));
+                let timing = trun.sample_timing(sample_num_rel, default_dur);
+                return Ok(Some(SampleTiming {
+                    pts: trun_ts_offset + timing.pts,
+                    dts: trun_ts_offset as i64 + timing.dts,
+                    dur: timing.dur,
+                }));
             }
 
             let trun_dur = trun.total_duration(default_dur);
@@ -364,14 +370,7 @@ impl StreamSegment for MoovSegment {
         let trak = &self.moov.traks[track_num];
 
         // Find the sample timing. Note, complexity of O(N).
-        let timing = trak.mdia.minf.stbl.stts.find_timing_for_sample(sample_num);
-
-        if let Some((ts, dur)) = timing {
-            Ok(Some(SampleTiming { ts, dur }))
-        }
-        else {
-            Ok(None)
-        }
+        Ok(trak.mdia.minf.stbl.stts.find_timing_for_sample(sample_num))
     }
 
     fn ts_sample(&self, track_num: usize, ts: u64) -> Result<Option<u32>> {

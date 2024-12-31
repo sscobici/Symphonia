@@ -9,7 +9,7 @@ use symphonia_core::errors::{decode_error, Result};
 use symphonia_core::io::ReadBytes;
 
 use crate::atoms::{Atom, AtomHeader, AtomIterator, AtomType};
-use crate::atoms::{Co64Atom, StcoAtom, StscAtom, StsdAtom, StszAtom, SttsAtom};
+use crate::atoms::{Co64Atom, CttsAtom, StcoAtom, StscAtom, StsdAtom, StszAtom, SttsAtom};
 
 use log::warn;
 
@@ -31,6 +31,7 @@ impl Atom for StblAtom {
 
         let mut stsd = None;
         let mut stts = None;
+        let mut ctts = None;
         let mut stsc = None;
         let mut stsz = None;
         let mut stco = None;
@@ -45,8 +46,7 @@ impl Atom for StblAtom {
                     stts = Some(iter.read_atom::<SttsAtom>()?);
                 }
                 AtomType::CompositionTimeToSample => {
-                    // Composition time to sample atom is only required for video.
-                    warn!("ignoring ctts atom.");
+                    ctts = Some(iter.read_atom::<CttsAtom>()?);
                 }
                 AtomType::SyncSample => {
                     // Sync sample atom is only required for video.
@@ -72,9 +72,13 @@ impl Atom for StblAtom {
             return decode_error("isomp4 (stbl): missing stsd atom");
         }
 
-        if stts.is_none() {
+        let Some(mut stts) = stts
+        else {
             return decode_error("isomp4 (stbl): missing stts atom");
-        }
+        };
+
+        // pass ctts (PTS information) to stts atom which will calculate timing info
+        stts.post_processing(ctts);
 
         if stsc.is_none() {
             return decode_error("isomp4 (stbl): missing stsc atom");
@@ -92,13 +96,6 @@ impl Atom for StblAtom {
         let mut stsc = stsc.unwrap();
         stsc.post_processing(&stco, &co64)?;
 
-        Ok(StblAtom {
-            stsd: stsd.unwrap(),
-            stts: stts.unwrap(),
-            stsc,
-            stsz: stsz.unwrap(),
-            stco,
-            co64,
-        })
+        Ok(StblAtom { stsd: stsd.unwrap(), stts, stsc, stsz: stsz.unwrap(), stco, co64 })
     }
 }

@@ -9,7 +9,9 @@ use symphonia_core::errors::{decode_error, Result};
 use symphonia_core::io::ReadBytes;
 use symphonia_core::util::bits;
 
+use crate::atoms::stts::MAX_SAMPLES_FOR_DTS_OFFSET;
 use crate::atoms::{Atom, AtomHeader};
+use crate::stream::SampleTiming;
 
 /// Track fragment run atom.
 #[allow(dead_code)]
@@ -25,6 +27,8 @@ pub struct TrunAtom {
     pub first_sample_flags: Option<u32>,
     /// Sample duration for each sample in this run.
     pub sample_duration: Vec<u32>,
+    /// Sample composition time offset for each sample in this run. Used to adjust PTS and DTS
+    pub sample_composition_time_offset: Vec<i32>,
     /// Sample size for each sample in this run.
     pub sample_size: Vec<u32>,
     /// Sample flags for each sample in this run.
@@ -33,6 +37,8 @@ pub struct TrunAtom {
     total_sample_size: u64,
     /// The total duration of all samples in this run. 0 if the sample duration flag is not set.
     total_sample_duration: u64,
+    /// by how much DTS should be shifted to make min PTS of the samples to be 0
+    dts_offset: i32,
 }
 
 impl TrunAtom {
@@ -117,16 +123,16 @@ impl TrunAtom {
 
     /// Get the timestamp and duration of a sample. The desired sample is specified by the
     /// trun-relative sample number, `sample_num_rel`.
-    pub fn sample_timing(&self, sample_num_rel: u32, default_dur: u32) -> (u64, u32) {
+    pub fn sample_timing(&self, sample_num_rel: u32, default_dur: u32) -> SampleTiming {
         debug_assert!(sample_num_rel < self.sample_count);
 
         if self.is_sample_duration_present() {
             // All sample durations are unique.
-            let ts = if sample_num_rel > 0 {
+            let dts = if sample_num_rel > 0 {
                 self.sample_duration[..sample_num_rel as usize]
                     .iter()
-                    .map(|&s| u64::from(s))
-                    .sum::<u64>()
+                    .map(|&s| i64::from(s))
+                    .sum::<i64>()
             }
             else {
                 0
@@ -134,21 +140,23 @@ impl TrunAtom {
 
             let dur = self.sample_duration[sample_num_rel as usize];
 
-            (ts, dur)
+            assert!(dts + self.dts_offset as i64 >= 0);
+            SampleTiming { pts: (dts + self.dts_offset as i64) as u64, dts, dur }
         }
         else {
             // The duration of all samples in the track fragment are not unique.
-            let ts = if sample_num_rel > 0 && self.is_first_sample_duration_present() {
+            let dts = if sample_num_rel > 0 && self.is_first_sample_duration_present() {
                 // The first sample has a unique duration.
-                u64::from(self.sample_duration[0])
-                    + u64::from(sample_num_rel - 1) * u64::from(default_dur)
+                i64::from(self.sample_duration[0])
+                    + i64::from(sample_num_rel - 1) * i64::from(default_dur)
             }
             else {
                 // Zero or more samples with identical durations.
-                u64::from(sample_num_rel) * u64::from(default_dur)
+                i64::from(sample_num_rel) * i64::from(default_dur)
             };
 
-            (ts, default_dur)
+            assert!(dts + self.dts_offset as i64 >= 0);
+            SampleTiming { pts: (dts + self.dts_offset as i64) as u64, dts, dur: default_dur }
         }
     }
 
@@ -267,11 +275,13 @@ impl Atom for TrunAtom {
         }
 
         let mut sample_duration = Vec::new();
+        let mut sample_composition_time_offset = Vec::new();
         let mut sample_size = Vec::new();
         let mut sample_flags = Vec::new();
 
         let mut total_sample_size = 0;
         let mut total_sample_duration = 0;
+        let mut dts_offset = 0;
 
         // TODO: Apply a limit.
         for _ in 0..sample_count {
@@ -291,11 +301,24 @@ impl Atom for TrunAtom {
                 sample_flags.push(reader.read_be_u32()?);
             }
 
-            // Ignoring composition time for now since it's a video thing...
+            // Reading offsets required for PTS calculation
             if (flags & TrunAtom::SAMPLE_COMPOSITION_TIME_OFFSETS_PRESENT) != 0 {
                 // For version 0, this is a u32.
                 // For version 1, this is a i32.
-                let _ = reader.read_be_u32()?;
+                let delta = reader.read_be_i32()?;
+
+                // calculate DTS offset using the first 10 samples
+                // find the minimum negative timing that can occur when ctts data is applied
+                if sample_composition_time_offset.is_empty() {
+                    dts_offset = delta;
+                }
+                else if sample_composition_time_offset.len() < MAX_SAMPLES_FOR_DTS_OFFSET
+                    && total_sample_duration as i32 + delta < dts_offset
+                {
+                    dts_offset = total_sample_duration as i32 + delta;
+                }
+
+                sample_composition_time_offset.push(delta);
             }
         }
 
@@ -305,10 +328,12 @@ impl Atom for TrunAtom {
             sample_count,
             first_sample_flags,
             sample_duration,
+            sample_composition_time_offset,
             sample_size,
             sample_flags,
             total_sample_size,
             total_sample_duration,
+            dts_offset: 0,
         })
     }
 }

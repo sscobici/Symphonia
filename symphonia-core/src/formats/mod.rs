@@ -487,10 +487,10 @@ pub struct Packet {
     /// This timestamp is in `TimeBase` units.
     pub pts: u64,
     /// The decoding timestamp (DTS) of the packet. Primarily used for video packets and is typically different
-    /// from the PTS. For audio packets, the DTS is always equal to the PTS.
+    /// from the PTS. Can be negative. For audio packets, the DTS is always equal to the PTS
     ///
     /// This timestamp is in `TimeBase` units.
-    pub dts: u64,
+    pub dts: i64,
     /// The duration of the packet. When gapless support is enabled, the duration does not include
     /// the encoder delay or padding.
     ///
@@ -509,12 +509,31 @@ pub struct Packet {
 impl Packet {
     /// Create a new `Packet` from a slice.
     pub fn new_from_slice(track_id: u32, pts: u64, dur: u64, buf: &[u8]) -> Self {
-        Packet { track_id, pts, dts: pts, dur, trim_start: 0, trim_end: 0, data: Box::from(buf) }
+        Packet {
+            track_id,
+            pts,
+            dts: pts as i64,
+            dur,
+            trim_start: 0,
+            trim_end: 0,
+            data: Box::from(buf),
+        }
     }
 
     /// Create a new `Packet` from a boxed slice.
     pub fn new_from_boxed_slice(track_id: u32, pts: u64, dur: u64, data: Box<[u8]>) -> Self {
-        Packet { track_id, pts, dts: pts, dur, trim_start: 0, trim_end: 0, data }
+        Packet { track_id, pts, dts: pts as i64, dur, trim_start: 0, trim_end: 0, data }
+    }
+
+    /// Create a new `Packet` from a boxed slice.
+    pub fn new_from_boxed_slice_v(
+        track_id: u32,
+        pts: u64,
+        dts: i64,
+        dur: u64,
+        data: Box<[u8]>,
+    ) -> Self {
+        Packet { track_id, pts, dts, dur, trim_start: 0, trim_end: 0, data }
     }
 
     /// Create a new `Packet` with trimming information from a slice.
@@ -526,7 +545,7 @@ impl Packet {
         trim_end: u32,
         buf: &[u8],
     ) -> Self {
-        Packet { track_id, pts, dts: pts, dur, trim_start, trim_end, data: Box::from(buf) }
+        Packet { track_id, pts, dts: pts as i64, dur, trim_start, trim_end, data: Box::from(buf) }
     }
 
     /// Create a new `Packet` with trimming information from a boxed slice.
@@ -538,7 +557,7 @@ impl Packet {
         trim_end: u32,
         data: Box<[u8]>,
     ) -> Self {
-        Packet { track_id, pts, dts: pts, dur, trim_start, trim_end, data }
+        Packet { track_id, pts, dts: pts as i64, dur, trim_start, trim_end, data }
     }
 
     /// The track identifier of the track this packet belongs to.
@@ -557,8 +576,8 @@ impl Packet {
     /// Get the decoding timestamp (DTS) of the packet in `TimeBase` units.
     ///
     /// Primarily used for video packets and is typically different
-    /// from the PTS. For audio packets, the DTS is always equal to the PTS.
-    pub fn dts(&self) -> u64 {
+    /// from the PTS. Can be negative. For audio packets, the DTS is always equal to the PTS
+    pub fn dts(&self) -> i64 {
         self.dts
     }
 

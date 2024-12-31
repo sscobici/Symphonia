@@ -12,13 +12,15 @@
 // in the remaining fields with default values.
 #![allow(clippy::needless_update)]
 
-use std::{io::ErrorKind, process::Command};
+use std::io::ErrorKind;
+use std::process::Command;
 
 use audio::run_audio;
 use clap::{Parser, Subcommand, ValueEnum};
 use info::run_info;
 use log::warn;
-use symphonia::core::{codecs::CodecParameters, errors::{Error, Result}};
+use symphonia::core::codecs::CodecParameters;
+use symphonia::core::errors::{Error, Result};
 use video::run_video;
 
 mod audio;
@@ -144,7 +146,6 @@ impl RefProcess {
         Ok(RefProcess { child })
     }
 }
-
 
 fn get_codec_type(index: usize, codec_params: &Option<CodecParameters>) -> &str {
     match codec_params {

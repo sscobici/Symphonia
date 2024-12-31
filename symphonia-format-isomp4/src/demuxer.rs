@@ -77,8 +77,10 @@ struct NextSampleInfo {
     track_num: usize,
     /// The track id.
     track_id: u32,
-    /// The timestamp of the next sample.
-    ts: u64,
+    /// The PTS (Presentation Timestamp) of the next sample.
+    pts: u64,
+    /// The DTS (Decoding Timestamp) of the next sample.
+    dts: i64,
     /// The timestamp expressed in seconds.
     time: Time,
     /// The duration of the next sample.
@@ -288,7 +290,7 @@ impl<'s> IsoMp4Reader<'s> {
                 // Try to get the timestamp for the next sample of the track from the segment.
                 if let Some(timing) = seg.sample_timing(state.track_num, state.next_sample)? {
                     // Calculate the presentation time using the timestamp.
-                    let sample_time = tb.calc_time(timing.ts);
+                    let sample_time = tb.calc_time(timing.pts);
 
                     // Compare the presentation time of the sample from this track to other tracks,
                     // and select the track with the earliest presentation time.
@@ -303,7 +305,8 @@ impl<'s> IsoMp4Reader<'s> {
                             earliest = Some(NextSampleInfo {
                                 track_num: state.track_num,
                                 track_id: state.track_id,
-                                ts: timing.ts,
+                                pts: timing.pts,
+                                dts: timing.dts,
                                 time: sample_time,
                                 dur: timing.dur,
                                 seg_idx: seg_idx_delta + state.cur_seg,
@@ -474,11 +477,11 @@ impl<'s> IsoMp4Reader<'s> {
                 "seeked track_num={} (track_id={}) to packet_ts={} (delta={})",
                 track_num,
                 track.track_id,
-                timing.ts,
-                timing.ts as i64 - ts as i64
+                timing.pts,
+                timing.pts - ts
             );
 
-            Ok(SeekedTo { track_id: track.track_id, required_ts: ts, actual_ts: timing.ts })
+            Ok(SeekedTo { track_id: track.track_id, required_ts: ts, actual_ts: timing.pts })
         }
         else {
             // Timestamp was not found.
@@ -558,9 +561,10 @@ impl FormatReader for IsoMp4Reader<'_> {
             }
         }
 
-        Ok(Some(Packet::new_from_boxed_slice(
+        Ok(Some(Packet::new_from_boxed_slice_v(
             next_sample_info.track_id,
-            next_sample_info.ts,
+            next_sample_info.pts,
+            next_sample_info.dts,
             u64::from(next_sample_info.dur),
             reader.read_boxed_slice_exact(sample_info.len as usize)?,
         )))
