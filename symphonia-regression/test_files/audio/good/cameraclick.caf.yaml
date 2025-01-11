@@ -1,0 +1,17 @@
+format:
+  format_info:
+    format: "CAF"
+    short_name: "caf"
+    long_name: "Core Audio Format"
+  tracks:
+  - id: 0
+    codec_params:
+      codec_type: "Audio"
+      codec: "ADPCM_IMA_WAV"
+      sample_rate: 22050
+      bits_per_sample: 0
+      bits_per_coded_sample: 272
+      channels: "[FL]"
+    time_base: "1/22050"
+    num_frames: 5807
+    start_ts: 0

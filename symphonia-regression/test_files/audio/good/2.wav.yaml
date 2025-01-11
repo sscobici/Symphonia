@@ -1,0 +1,21 @@
+format:
+  format_info:
+    format: "WAVE"
+    short_name: "wave"
+    long_name: "Waveform Audio File Format"
+  tracks:
+  - id: 0
+    codec_params:
+      codec_type: "Audio"
+      codec: "PCM_U8"
+      sample_rate: 11025
+      bits_per_sample: 8
+      bits_per_coded_sample: 8
+      channels: "[FL]"
+      frames_per_block: 1
+    time_base: "1/11025"
+    num_frames: 1961
+    start_ts: 0
+packets:  # - id: "id, track_id, pts, dts, dur, data_len"
+- id: "1, 0, 0, 0, 1152, 1152"
+- id: "2, 0, 1152, 1152, 809, 809"

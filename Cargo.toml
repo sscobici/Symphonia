@@ -21,4 +21,5 @@ members = [
     "symphonia-metadata",
     "symphonia-play",
     "symphonia-check",
+    "symphonia-regression",
 ]

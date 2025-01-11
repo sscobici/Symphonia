@@ -1,0 +1,34 @@
+format:
+  format_info:
+    format: "FLAC"
+    short_name: "flac"
+    long_name: "Free Lossless Audio Codec Native"
+  tracks:
+  - id: 0
+    codec_params:
+      codec_type: "Audio"
+      codec: "FLAC"
+      sample_rate: 48000
+      bits_per_sample: 16
+      channels: "[FL,FR]"
+      extra_data:
+        data_len: 34
+    time_base: "1/48000"
+    num_frames: 68546
+    start_ts: 0
+packets:  # - id: "id, track_id, pts, dts, dur, data_len"
+- id: "1, 0, 0, 0, 4608, 783"
+- id: "2, 0, 4608, 4608, 4608, 3647"
+- id: "3, 0, 9216, 9216, 4608, 3681"
+- id: "4, 0, 13824, 13824, 4608, 4018"
+- id: "5, 0, 18432, 18432, 4608, 3950"
+- id: "6, 0, 23040, 23040, 4608, 3844"
+- id: "7, 0, 27648, 27648, 4608, 4744"
+- id: "8, 0, 32256, 32256, 4608, 3657"
+- id: "9, 0, 36864, 36864, 4608, 3512"
+- id: "10, 0, 41472, 41472, 4608, 3421"
+- id: "11, 0, 46080, 46080, 4608, 3350"
+- id: "12, 0, 50688, 50688, 4608, 3295"
+- id: "13, 0, 55296, 55296, 4608, 3224"
+- id: "14, 0, 59904, 59904, 4608, 2684"
+- id: "15, 0, 64512, 64512, 4034, 1313"

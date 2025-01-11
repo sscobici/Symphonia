@@ -1,0 +1,15 @@
+[package]
+name = "symphonia-regression"
+version = "0.5.4"
+description = "Reggression tests"
+homepage = "https://github.com/pdeljanov/Symphonia"
+repository = "https://github.com/pdeljanov/Symphonia"
+license = "MPL-2.0"
+readme = "README.md"
+edition = "2021"
+
+[dependencies]
+symphonia = { version = "0.5.4", path = "../symphonia", features = ["all", "opt-simd"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9"
+
