@@ -6,7 +6,9 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 use crate::atoms::limits::*;
-use crate::atoms::{Atom, AtomHeader, AtomIterator, ReadAtom, Result, decode_error};
+use crate::atoms::{
+    Atom, AtomHeader, AtomIterator, Co64Atom, ReadAtom, Result, StcoAtom, decode_error,
+};
 
 #[derive(Debug)]
 pub struct StscEntry {
@@ -51,6 +53,50 @@ impl StscAtom {
         // get with an index of 0, and safely returning None.
         self.entries.get(left - 1)
     }
+
+    pub fn post_processing(
+        &mut self,
+        stco: &Option<StcoAtom>,
+        co64: &Option<Co64Atom>,
+    ) -> Result<()> {
+        // Post-process entries to check for errors and calculate the file sample.
+        if !self.entries.is_empty() {
+            // stco and co64 can both be absent, this is a spec. violation, but some m4a files appear to lack these atoms.
+            // set maximum possible total_chunks in this case
+            let mut total_chunks = u32::MAX;
+
+            if let Some(stco) = stco {
+                total_chunks = stco.chunk_offsets.len() as u32;
+            }
+            else if let Some(co64) = co64 {
+                total_chunks = co64.chunk_offsets.len() as u32;
+            }
+
+            for i in 0..self.entries.len() - 1 {
+                // Validate that first_chunk is within the total number of chunks
+                // first_chunk index was transformed to be starting from 0
+                if self.entries[i].first_chunk >= total_chunks
+                    || self.entries[i + 1].first_chunk >= total_chunks
+                {
+                    return decode_error(
+                        "isomp4 (stsc): entry's first chunk is bigger than total chunk number",
+                    );
+                }
+
+                // Validate that first_chunk is monotonic across all entries.
+                if self.entries[i + 1].first_chunk <= self.entries[i].first_chunk {
+                    return decode_error("isomp4 (stsc): entry's first chunk not monotonic");
+                }
+
+                let n = self.entries[i + 1].first_chunk - self.entries[i].first_chunk;
+
+                self.entries[i + 1].first_sample =
+                    self.entries[i].first_sample + (n * self.entries[i].samples_per_chunk);
+            }
+        }
+
+        Ok(())
+    }
 }
 
 impl Atom for StscAtom {
@@ -64,37 +110,26 @@ impl Atom for StscAtom {
         let mut entries = Vec::with_capacity(MAX_TABLE_INITIAL_CAPACITY.min(entry_count as usize));
 
         for _ in 0..entry_count {
-            entries.push(StscEntry {
-                first_chunk: it.read_u32()? - 1,
-                first_sample: 0,
-                samples_per_chunk: it.read_u32()?,
-                sample_desc_index: it.read_u32()?,
-            });
-        }
+            let first_chunk = it.read_u32()?;
 
-        // Post-process entries to check for errors and calculate the file sample.
-        if entry_count > 0 {
-            for i in 0..entry_count as usize - 1 {
-                // Validate that first_chunk is monotonic across all entries.
-                if entries[i + 1].first_chunk < entries[i].first_chunk {
-                    return decode_error("isomp4 (stsc): entry first chunk not monotonic");
-                }
-
-                // Validate that samples per chunk is > 0. Could the entry be ignored?
-                if entries[i].samples_per_chunk == 0 {
-                    return decode_error("isomp4 (stsc): entry has 0 samples per chunk");
-                }
-
-                let n = entries[i + 1].first_chunk - entries[i].first_chunk;
-
-                entries[i + 1].first_sample =
-                    entries[i].first_sample + (n * entries[i].samples_per_chunk);
+            // Validate that first chunk is indexed from 1
+            if first_chunk == 0 {
+                return decode_error("isomp4 (stsc): entry's first chunk undex should be from 1");
             }
+
+            let samples_per_chunk = it.read_u32()?;
 
             // Validate that samples per chunk is > 0. Could the entry be ignored?
-            if entries[entry_count as usize - 1].samples_per_chunk == 0 {
+            if samples_per_chunk == 0 {
                 return decode_error("isomp4 (stsc): entry has 0 samples per chunk");
             }
+
+            entries.push(StscEntry {
+                first_chunk: first_chunk - 1,
+                first_sample: 0,
+                samples_per_chunk: samples_per_chunk,
+                sample_desc_index: it.read_u32()?,
+            });
         }
 
         Ok(StscAtom { entries })

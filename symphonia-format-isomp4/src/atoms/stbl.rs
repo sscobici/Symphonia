@@ -86,10 +86,13 @@ impl Atom for StblAtom {
             warn!("missing stco or co64 atom");
         }
 
+        let mut stsc = stsc.unwrap();
+        stsc.post_processing(&stco, &co64)?;
+
         Ok(StblAtom {
             stsd: stsd.unwrap(),
             stts: stts.unwrap(),
-            stsc: stsc.unwrap(),
+            stsc,
             stsz: stsz.unwrap(),
             stco,
             co64,
