@@ -127,7 +127,7 @@ impl Atom for StscAtom {
             entries.push(StscEntry {
                 first_chunk: first_chunk - 1,
                 first_sample: 0,
-                samples_per_chunk: samples_per_chunk,
+                samples_per_chunk,
                 sample_desc_index: it.read_u32()?,
             });
         }
