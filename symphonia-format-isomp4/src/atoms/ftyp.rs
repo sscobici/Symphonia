@@ -33,7 +33,12 @@ impl Atom for FtypAtom {
         }
 
         // Major
-        let major = FourCc::new(it.read_quad_bytes()?);
+        let Some(major) = FourCc::try_new(it.read_quad_bytes()?)
+        else {
+            return decode_error(
+                "isomp4 (ftyp): major - only ASCII characters are allowed in a FourCc",
+            );
+        };
 
         // Minor
         let minor = it.read_quad_bytes()?;
@@ -46,8 +51,13 @@ impl Atom for FtypAtom {
         let mut compatible = Vec::with_capacity(MAX_TABLE_INITIAL_CAPACITY.min(n_brands as usize));
 
         for _ in 0..n_brands {
-            let brand = it.read_quad_bytes()?;
-            compatible.push(FourCc::new(brand));
+            let Some(brand) = FourCc::try_new(it.read_quad_bytes()?)
+            else {
+                return decode_error(
+                    "isomp4 (ftyp): brand - only ASCII characters are allowed in a FourCc",
+                );
+            };
+            compatible.push(brand);
         }
 
         Ok(FtypAtom { major, minor, compatible })
