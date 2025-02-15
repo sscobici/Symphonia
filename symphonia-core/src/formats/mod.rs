@@ -480,7 +480,7 @@ fn matches_track_type(track: &Track, track_type: TrackType) -> bool {
 #[derive(Clone)]
 pub struct Packet {
     /// The track ID.
-    track_id: u32,
+    pub track_id: u32,
     /// The timestamp of the packet. When gapless support is enabled, this timestamp is relative to
     /// the end of the encoder delay.
     ///

@@ -151,7 +151,7 @@ impl<S: EbmlSchema> Clone for EbmlElementHeader<S> {
 
 impl<S: EbmlSchema> EbmlElementHeader<S> {
     /// Minimum EBML header size.
-    pub const MIN_SIZE: u64 = 2;
+    pub(crate) const MIN_SIZE: u64 = 2;
 
     /// Read an EBML element header from the stream.
     pub(crate) fn read<R: ReadBytes>(reader: &mut R, depth: u8, schema: &S) -> Result<Self> {

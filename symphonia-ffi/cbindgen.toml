@@ -1,0 +1,8 @@
+include_guard = "SYMPHONIA_H"
+language = "C"
+no_includes = true
+sys_includes = ["stdint.h"]
+usize_is_size_t = true
+
+[export]
+prefix = "SM"

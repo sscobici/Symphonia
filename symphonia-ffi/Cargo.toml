@@ -1,0 +1,18 @@
+[package]
+name = "symphonia-ffi"
+version = "0.5.4"
+description = "Project Symphonia FFI lib"
+homepage = "https://github.com/pdeljanov/Symphonia"
+repository = "https://github.com/pdeljanov/Symphonia"
+authors = ["Philip Deljanov <philip.deljanov@gmail.com>"]
+license = "MPL-2.0"
+edition = "2021"
+rust-version = "1.77"
+publish = false
+
+[dependencies]
+symphonia = { version = "0.5.4", path = "../symphonia", features = ["all", "opt-simd"] }
+
+[lib]
+name = "symphonia_ffi"
+crate-type = ["staticlib"]

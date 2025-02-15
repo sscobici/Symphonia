@@ -124,11 +124,11 @@ struct AdtsHeader {
 
 impl AdtsHeader {
     /// The size of the an ADTS header CRC.
-    pub const CRC_SIZE: u16 = 2;
+    pub(crate) const CRC_SIZE: u16 = 2;
     /// The size of a ADTS header including the sync word and no a CRC.
-    pub const SIZE_NO_CRC: u16 = 7;
+    pub(crate) const SIZE_NO_CRC: u16 = 7;
     /// The size of a ADTS header including the sync word and CRC.
-    pub const SIZE_WITH_CRC: u16 = Self::SIZE_NO_CRC + Self::CRC_SIZE;
+    pub(crate) const SIZE_WITH_CRC: u16 = Self::SIZE_NO_CRC + Self::CRC_SIZE;
 
     /// Read the body of a header at the current position of the reader.
     fn read_body<B: ReadBytes>(reader: &mut B, has_crc: bool) -> Result<Self> {
