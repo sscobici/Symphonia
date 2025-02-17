@@ -3,22 +3,20 @@ use std::os::raw::{c_char, c_void};
 use std::ptr::null_mut;
 
 use symphonia::core::formats::{FormatOptions, FormatReader};
-use symphonia::core::io::MediaSourceStream;
+use symphonia::core::io::{MediaSourceStream, ReadOnlySource};
 use symphonia::core::meta::MetadataOptions;
 use symphonia::default::get_probe;
+use win::WinIAsyncReader;
+use windows::Win32::Media::DirectShow::IAsyncReader;
 use wrap::Packet;
 
+mod win;
 mod wrap;
-
-// #[no_mangle]
-// pub extern "C" fn sm_get_probe() -> *const Probe {
-//     get_probe()
-// }
 
 /// # Safety
 /// This function should receive a pointer to c string.
 #[no_mangle]
-pub unsafe extern "C" fn sm_io_media_source_stream_new_file(path: *mut c_char) -> *mut c_void {
+pub unsafe extern "C" fn sm_io_mss_new_file(path: *mut c_char) -> *mut c_void {
     if path.is_null() {
         return null_mut();
     }
@@ -28,6 +26,16 @@ pub unsafe extern "C" fn sm_io_media_source_stream_new_file(path: *mut c_char) -
     // Box MediaSourceStream to put structure on the heap
     Box::into_raw(Box::new(MediaSourceStream::new(Box::new(src), Default::default())))
         as *mut c_void
+}
+
+#[no_mangle]
+pub extern "C" fn sm_io_mss_new_win_iasyncreader(iasyncreader: *mut c_void) -> *mut c_void {
+    if iasyncreader.is_null() {
+        return null_mut();
+    }
+    let reader = WinIAsyncReader::new(iasyncreader as *mut IAsyncReader);
+    let mss = MediaSourceStream::new(Box::new(ReadOnlySource::new(reader)), Default::default());
+    Box::into_raw(Box::new(mss)) as *mut c_void
 }
 
 #[no_mangle]
@@ -80,33 +88,3 @@ pub extern "C" fn sm_format_next_packet(format: *mut c_void) -> *mut Packet {
         }
     }
 }
-
-// struct MyFormatReader;
-// pub trait FormatReader2 {
-//     fn read(&self) {
-//         println!("Reading FormatReader2...");
-//     }
-// }
-
-// impl FormatReader2 for MyFormatReader {
-//     fn read(&self) {
-//         println!("Reading MyFormatReader...");
-//     }
-// }
-
-// #[no_mangle]
-// pub extern "C" fn create_reader() -> *mut c_void {
-//     let reader: Box<dyn FormatReader2> = Box::new(MyFormatReader);
-//     Box::into_raw(Box::new(reader)) as *mut c_void
-// }
-
-// #[no_mangle]
-// pub extern "C" fn consume_reader(ptr: *mut c_void) {
-//     if ptr.is_null() {
-//         return;
-//     }
-//     unsafe {
-//         let reader = Box::from_raw(ptr as *mut Box<dyn FormatReader2>);
-//         reader.read();
-//     }
-// }

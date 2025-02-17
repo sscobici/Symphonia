@@ -4,5 +4,8 @@ no_includes = true
 sys_includes = ["stdint.h"]
 usize_is_size_t = true
 
+[parse]
+exclude = ["windows"]
+
 [export]
 prefix = "SM"
