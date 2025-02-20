@@ -3,11 +3,10 @@ use std::os::raw::{c_char, c_void};
 use std::ptr::null_mut;
 
 use symphonia::core::formats::{FormatOptions, FormatReader};
-use symphonia::core::io::{MediaSourceStream, ReadOnlySource};
+use symphonia::core::io::MediaSourceStream;
 use symphonia::core::meta::MetadataOptions;
 use symphonia::default::get_probe;
 use win::WinIAsyncReader;
-use windows::Win32::Media::DirectShow::IAsyncReader;
 use wrap::Packet;
 
 mod win;
@@ -33,8 +32,8 @@ pub extern "C" fn sm_io_mss_new_win_iasyncreader(iasyncreader: *mut c_void) -> *
     if iasyncreader.is_null() {
         return null_mut();
     }
-    let reader = WinIAsyncReader::new(iasyncreader as *mut IAsyncReader);
-    let mss = MediaSourceStream::new(Box::new(ReadOnlySource::new(reader)), Default::default());
+    let reader = WinIAsyncReader::new(iasyncreader);
+    let mss = MediaSourceStream::new(Box::new(reader), Default::default());
     Box::into_raw(Box::new(mss)) as *mut c_void
 }
 

@@ -1,5 +1,6 @@
 include_guard = "SYMPHONIA_H"
 language = "C"
+cpp_compat = true
 no_includes = true
 sys_includes = ["stdint.h"]
 usize_is_size_t = true
