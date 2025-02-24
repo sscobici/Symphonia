@@ -174,6 +174,7 @@ impl From<Time> for std::time::Duration {
 ///
 /// In other words, a `TimeBase` is the length in seconds of one tick of a `TimeStamp` or
 /// `Duration`.
+#[repr(C)]
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TimeBase {
     /// The numerator.

@@ -7,6 +7,7 @@ usize_is_size_t = true
 
 [parse]
 exclude = ["windows"]
+extra_bindings = ["symphonia-core"]
 
 [export]
 prefix = "SM"

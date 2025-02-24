@@ -25,7 +25,7 @@ mod no_simd;
 pub use no_simd::*;
 
 /// The maximum supported FFT size.
-pub const MAX_SIZE: usize = 1 << 16;
+pub(crate) const MAX_SIZE: usize = 1 << 16;
 
 #[cfg(test)]
 mod tests {
