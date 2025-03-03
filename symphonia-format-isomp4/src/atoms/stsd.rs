@@ -24,14 +24,16 @@ use symphonia_core::codecs::audio::{
 };
 use symphonia_core::codecs::subtitle::well_known::CODEC_ID_MOV_TEXT;
 use symphonia_core::codecs::subtitle::SubtitleCodecParameters;
-use symphonia_core::codecs::video::{VideoCodecId, VideoCodecParameters, VideoExtraData};
+use symphonia_core::codecs::video::{
+    ColorSpace, VideoCodecId, VideoCodecParameters, VideoExtraData,
+};
 use symphonia_core::codecs::{CodecParameters, CodecProfile};
 use symphonia_core::errors::{decode_error, unsupported_error, Result};
 use symphonia_core::io::ReadBytes;
 
 use crate::atoms::{
-    AlacAtom, Atom, AtomHeader, AtomIterator, AtomType, AvcCAtom, Dac3Atom, Dec3Atom, DoviAtom,
-    EsdsAtom, FlacAtom, HvcCAtom, OpusAtom, WaveAtom,
+    AlacAtom, Atom, AtomHeader, AtomIterator, AtomType, AvcCAtom, ColrAtom, Dac3Atom, Dec3Atom,
+    DoviAtom, EsdsAtom, FlacAtom, HvcCAtom, OpusAtom, WaveAtom,
 };
 use crate::fp::FpU16;
 
@@ -463,6 +465,7 @@ pub struct VisualSampleEntry {
     pub codec_id: VideoCodecId,
     pub profile: Option<CodecProfile>,
     pub level: Option<u32>,
+    pub color_space: Option<ColorSpace>,
     pub extra_data: Vec<VideoExtraData>,
 }
 
@@ -472,6 +475,7 @@ impl VisualSampleEntry {
             width: Some(self.width),
             height: Some(self.height),
             codec: self.codec_id,
+            color_space: self.color_space.clone(),
             extra_data: self.extra_data.clone(),
             ..Default::default()
         };
@@ -552,6 +556,10 @@ fn read_visual_sample_entry<B: ReadBytes>(
             }
             AtomType::DolbyVisionConfiguration => {
                 let atom = iter.read_atom::<DoviAtom>()?;
+                atom.fill_video_sample_entry(&mut entry);
+            }
+            AtomType::ColorParameter => {
+                let atom = iter.read_atom::<ColrAtom>()?;
                 atom.fill_video_sample_entry(&mut entry);
             }
             _ => {

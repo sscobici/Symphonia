@@ -13,6 +13,7 @@ use symphonia_core::io::ReadBytes;
 pub(crate) mod alac;
 pub(crate) mod avcc;
 pub(crate) mod co64;
+pub(crate) mod colr;
 pub(crate) mod ctts;
 pub(crate) mod dac3;
 pub(crate) mod dec3;
@@ -58,6 +59,7 @@ pub use self::meta::MetaAtom;
 pub use alac::AlacAtom;
 pub use avcc::AvcCAtom;
 pub use co64::Co64Atom;
+pub use colr::ColrAtom;
 #[allow(unused_imports)]
 pub use ctts::CttsAtom;
 pub use dac3::Dac3Atom;
@@ -133,6 +135,7 @@ pub enum AtomType {
     ChunkOffset,
     ChunkOffset64,
     CleanAperture,
+    ColorParameter,
     CommentTag,
     CompilationTag,
     ComposerTag,
@@ -276,6 +279,7 @@ impl From<[u8; 4]> for AtomType {
             b"ec-3" => AtomType::AudioSampleEntryEc3,
             b"clap" => AtomType::CleanAperture,
             b"co64" => AtomType::ChunkOffset64,
+            b"colr" => AtomType::ColorParameter,
             b"ctts" => AtomType::CompositionTimeToSample,
             b"dac3" => AtomType::Ac3Config,
             b"dec3" => AtomType::Eac3Config,

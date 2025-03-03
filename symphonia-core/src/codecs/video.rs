@@ -76,6 +76,16 @@ pub struct VideoExtraData {
     pub data: Box<[u8]>,
 }
 
+/// Extra data for a video codec.
+#[derive(Clone, Debug, Default)]
+pub struct ColorSpace {
+    pub colour_primaries: u8,
+    pub transfer_characteristics: u8,
+    pub matrix_coefficients: u8,
+    pub range: u8,
+    pub chroma_location: u8,
+}
+
 /// Codec parameters for video codecs.
 #[derive(Clone, Debug, Default)]
 pub struct VideoCodecParameters {
@@ -89,6 +99,8 @@ pub struct VideoCodecParameters {
     pub width: Option<u16>,
     /// Video height.
     pub height: Option<u16>,
+    /// Color space of the video stream
+    pub color_space: Option<ColorSpace>,
     /// Extra data (defined by the codec).
     pub extra_data: Vec<VideoExtraData>,
 }
