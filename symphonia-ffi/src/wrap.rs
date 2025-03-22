@@ -1,7 +1,7 @@
 use std::os::raw::c_char;
 use std::ptr::null;
 
-use symphonia::core::codecs::video::{VideoCodecId, VideoExtraDataId};
+use symphonia::core::codecs::video::{ColorSpace, VideoCodecId, VideoExtraDataId};
 use symphonia::core::units::TimeBase;
 
 /// A `Packet` contains a discrete amount of encoded data for a single codec bitstream. The exact
@@ -75,9 +75,9 @@ pub struct Track {
 #[derive(Default)]
 pub struct CodecParameters {
     pub codec_type: CodecType,
-//    pub audio_params: AudioCodecParameters,
+    //    pub audio_params: AudioCodecParameters,
     pub video_params: VideoCodecParameters,
-//    pub subtitle_params: SubtitleCodecParameters,
+    //    pub subtitle_params: SubtitleCodecParameters,
 }
 
 #[repr(u8)]
@@ -112,6 +112,8 @@ pub struct VideoCodecParameters {
     pub width: u16,
     /// Video height.
     pub height: u16,
+    /// Color space of the video stream
+    pub color_space: *const ColorSpace,
     // Extra data (defined by the codec).
     pub extra_data: *const VideoExtraData,
     // Extra data length
@@ -126,6 +128,7 @@ impl Default for VideoCodecParameters {
             level: Default::default(),
             width: Default::default(),
             height: Default::default(),
+            color_space: null(),
             extra_data: null(),
             extra_data_len: Default::default(),
         }

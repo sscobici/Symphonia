@@ -76,10 +76,11 @@ pub struct VideoExtraData {
     pub data: Box<[u8]>,
 }
 
-/// Extra data for a video codec.
+/// Color Space parameters
 #[derive(Clone, Debug, Default)]
+#[repr(C)]
 pub struct ColorSpace {
-    pub colour_primaries: u8,
+    pub color_primaries: u8,
     pub transfer_characteristics: u8,
     pub matrix_coefficients: u8,
     pub range: u8,

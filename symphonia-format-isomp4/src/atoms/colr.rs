@@ -26,7 +26,7 @@ impl Atom for ColrAtom {
             b"nclx" => {
                 // on-screen colours
                 Some(ColorSpace {
-                    colour_primaries: reader.read_be_u16()? as u8,
+                    color_primaries: reader.read_be_u16()? as u8,
                     transfer_characteristics: reader.read_be_u16()? as u8,
                     matrix_coefficients: reader.read_be_u16()? as u8,
                     range: reader.read_byte()? >> 7,
