@@ -35,7 +35,6 @@ fn span_error<T>() -> io::Result<T> {
     Err(io::Error::new(io::ErrorKind::Other, "read spans too many buffers"))
 }
 
-
 impl<'a> SlidingBufsReader<'a> {
     /// Instantiate a new `SlidingBufsReader`.
     ///
@@ -80,7 +79,7 @@ impl<'a> SlidingBufsReader<'a> {
         }
         self.bufs_ring[self.bufs_tail] = buf;
         self.bufs_tail = next_tail;
-        
+
         Ok(())
     }
 
@@ -160,7 +159,6 @@ impl<'a> SlidingBufsReader<'a> {
         Ok((slices, slice_count))
     }
 
-
     // --- Primitive read methods ---
 
     /// Reads a single byte (`u8`) from the buffer.
@@ -238,7 +236,6 @@ impl<'a> SlidingBufsReader<'a> {
         Ok(u64::from_le_bytes(buf))
     }
 
-
     // --- Private Helper Methods ---
 
     /// Fills the provided `buf` with data from the reader.
@@ -289,6 +286,8 @@ impl<'a> SlidingBufsReader<'a> {
 
     #[inline]
     fn get_bytes<const N: usize>(&self) -> [u8; N] {
-        self.bufs_ring[self.r_buf_idx][self.r_buf_pos..self.r_buf_pos + N].try_into().expect("slice with incorrect length")
+        self.bufs_ring[self.r_buf_idx][self.r_buf_pos..self.r_buf_pos + N]
+            .try_into()
+            .expect("slice with incorrect length")
     }
 }
