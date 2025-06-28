@@ -27,6 +27,7 @@ mod buf_reader;
 mod media_source_stream;
 mod monitor_stream;
 mod scoped_stream;
+mod sliding_bufs_reader;
 
 pub use bit::*;
 pub use buf_reader::BufReader;
