@@ -205,7 +205,7 @@ impl<'a> SlidingBufsReader<'a> {
         let current_buf = self.bufs_ring[self.r_buf_idx];
         if current_buf.len().saturating_sub(self.r_buf_pos) >= SIZE {
             let res = u32::from_le_bytes(self.get_bytes());
-            self.r_pos += size_of::u32;
+            self.r_pos += SIZE;
             self.r_buf_pos += SIZE;
             return Ok(res);
         }
