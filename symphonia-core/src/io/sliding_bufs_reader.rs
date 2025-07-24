@@ -13,9 +13,9 @@ pub struct SlidingBufsReader<'a> {
     r_pos: usize,
     /// Ring buffer holding the byte slices.
     bufs_ring: [&'a [u8]; 4],
-    /// The head of the ring buffer, pointing to the oldest slice.
+    /// The head of the ring buffer, pointing to the oldest slice, where the reads will happen first
     bufs_head: usize,
-    /// The tail of the ring buffer, pointing to where the next slice will be inserted.
+    /// The tail of the ring buffer, pointing to where the next slice will be inserted
     bufs_tail: usize,
     /// The index of the buffer in `bufs_ring` from which we are currently reading.
     r_buf_idx: usize,
