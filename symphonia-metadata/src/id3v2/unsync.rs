@@ -100,6 +100,14 @@ impl<B: ReadBytes + FiniteStream> ReadBytes for UnsyncStream<B> {
         Ok(self.byte)
     }
 
+    fn read_bytes<const N: usize>(&mut self) -> io::Result<[u8; N]> {
+        let mut bytes = [0u8; N];
+        for byte in bytes.iter_mut() {
+            *byte = self.read_byte()?;
+        }
+        Ok(bytes)
+    }
+
     fn read_double_bytes(&mut self) -> io::Result<[u8; 2]> {
         Ok([self.read_byte()?, self.read_byte()?])
     }

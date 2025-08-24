@@ -147,6 +147,9 @@ pub trait ReadBytes {
     fn read_byte(&mut self) -> io::Result<u8>;
 
     /// Reads two bytes from the stream and returns them in read-order or an error.
+    fn read_bytes<const N:usize>(&mut self) -> io::Result<[u8; N]>;
+
+    /// Reads two bytes from the stream and returns them in read-order or an error.
     fn read_double_bytes(&mut self) -> io::Result<[u8; 2]>;
 
     /// Reads three bytes from the stream and returns them in read-order or an error.
@@ -177,7 +180,7 @@ pub trait ReadBytes {
     /// integer or returns an error.
     #[inline(always)]
     fn read_u16(&mut self) -> io::Result<u16> {
-        Ok(u16::from_le_bytes(self.read_double_bytes()?))
+        Ok(u16::from_le_bytes(self.read_bytes()?))
     }
 
     /// Reads two bytes from the stream and interprets them as an signed 16-bit little-endian
@@ -373,6 +376,11 @@ impl<R: ReadBytes> ReadBytes for &mut R {
     #[inline(always)]
     fn read_byte(&mut self) -> io::Result<u8> {
         (*self).read_byte()
+    }
+
+    #[inline(always)]
+    fn read_bytes<const N: usize>(&mut self) -> io::Result<[u8; N]> {
+        (*self).read_bytes()
     }
 
     #[inline(always)]

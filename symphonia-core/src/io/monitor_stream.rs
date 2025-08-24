@@ -80,6 +80,14 @@ impl<B: ReadBytes, M: Monitor> ReadBytes for MonitorStream<B, M> {
     }
 
     #[inline(always)]
+    fn read_bytes<const N: usize>(&mut self) -> io::Result<[u8; N]> {
+        let bytes: [u8; N] = self.inner.read_bytes()?;
+        // TODO
+//        self.monitor.process_double_bytes(bytes);
+        Ok(bytes)
+    }    
+
+    #[inline(always)]
     fn read_double_bytes(&mut self) -> io::Result<[u8; 2]> {
         let bytes = self.inner.read_double_bytes()?;
         self.monitor.process_double_bytes(bytes);
