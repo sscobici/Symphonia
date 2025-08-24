@@ -168,3 +168,10 @@ optional = true
 # Show documentation with all features enabled on docs.rs
 [package.metadata.docs.rs]
 all-features = true
+
+[dev-dependencies]
+criterion = "0.7"
+
+[[bench]]
+name = "my_benchmark"
+harness = false
