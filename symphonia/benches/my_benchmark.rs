@@ -1,7 +1,12 @@
 use std::{hint::black_box, sync::Arc};
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use symphonia_core::{errors::Error, formats::{probe::Hint, FormatOptions, TrackType}, io::MediaSourceStream, meta::MetadataOptions};
+use symphonia_core::{
+    errors::Error,
+    formats::{probe::Hint, FormatOptions, TrackType},
+    io::MediaSourceStream,
+    meta::MetadataOptions,
+};
 
 fn demux_mkv_benchmark(c: &mut Criterion) {
     let mut g = c.benchmark_group("demux");
