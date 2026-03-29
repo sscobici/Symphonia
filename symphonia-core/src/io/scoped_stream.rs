@@ -80,6 +80,16 @@ impl<B: ReadBytes> ReadBytes for ScopedStream<B> {
     }
 
     #[inline(always)]
+    fn read_bytes<const N: usize>(&mut self) -> io::Result<[u8; N]> {
+        if self.len - self.read < N as u64{
+            return out_of_bounds_error();
+        }
+
+        self.read += N as u64;
+        self.inner.read_bytes()
+    }
+
+    #[inline(always)]
     fn read_double_bytes(&mut self) -> io::Result<[u8; 2]> {
         if self.len - self.read < 2 {
             return out_of_bounds_error();

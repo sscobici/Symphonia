@@ -105,6 +105,19 @@ impl ReadBytes for BufReader<'_> {
     }
 
     #[inline(always)]
+    fn read_bytes<const N: usize>(&mut self) -> io::Result<[u8; N]> {
+        if self.buf.len() - self.pos < N {
+            return underrun_error();
+        }
+
+        let mut bytes:[u8; N] = [0u8; N];
+        bytes.copy_from_slice(&self.buf[self.pos..self.pos + N]);
+        self.pos += 2;
+
+        Ok(bytes)
+    }
+
+    #[inline(always)]
     fn read_double_bytes(&mut self) -> io::Result<[u8; 2]> {
         if self.buf.len() - self.pos < 2 {
             return underrun_error();

@@ -250,6 +250,24 @@ impl ReadBytes for MediaSourceStream<'_> {
         Ok(value)
     }
 
+    fn read_bytes<const N: usize>(&mut self) -> io::Result<[u8; N]> {
+        let mut bytes = [0; N];
+
+        let buf = self.continguous_buf();
+
+        if buf.len() >= N {
+            bytes.copy_from_slice(&buf[..2]);
+            self.consume(N);
+        }
+        else {
+            for byte in bytes.iter_mut() {
+                *byte = self.read_byte()?;
+            }
+        };
+
+        Ok(bytes)
+    }
+
     fn read_double_bytes(&mut self) -> io::Result<[u8; 2]> {
         let mut bytes = [0; 2];
 
