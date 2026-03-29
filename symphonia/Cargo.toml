@@ -173,3 +173,10 @@ optional = true
 version = "0.6.0-alpha.1"
 path = "../symphonia-format-caf"
 optional = true
+
+[dev-dependencies]
+criterion = "0.7"
+
+[[bench]]
+name = "my_benchmark"
+harness = false
