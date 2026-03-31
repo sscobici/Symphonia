@@ -57,7 +57,8 @@ impl TrackState {
 
         track
             .with_time_base(TimeBase::from_recip(timespan.timescale))
-            .with_num_frames(timespan.duration);
+            .with_num_frames(timespan.duration)
+            .with_language(&trak.mdia.mdhd.language);
 
         let state = Self {
             track_num,
