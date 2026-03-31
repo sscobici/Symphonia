@@ -24,6 +24,7 @@ pub(crate) mod avcc;
 pub(crate) mod co64;
 pub(crate) mod ctts;
 pub(crate) mod dac3;
+pub(crate) mod dac4;
 pub(crate) mod dec3;
 pub(crate) mod dovi;
 pub(crate) mod edts;
@@ -72,6 +73,7 @@ pub use co64::Co64Atom;
 #[allow(unused_imports)]
 pub use ctts::CttsAtom;
 pub use dac3::Dac3Atom;
+pub use dac4::Dac4Atom;
 pub use dec3::Dec3Atom;
 pub use dovi::DoviAtom;
 pub use edts::EdtsAtom;
@@ -115,6 +117,7 @@ pub use wave::WaveAtom;
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum AtomType {
     Ac3Config,
+    Ac4Config,
     AdvisoryTag,
     AlbumArtistTag,
     AlbumTag,
@@ -289,6 +292,7 @@ impl From<[u8; 4]> for AtomType {
             b"co64" => AtomType::ChunkOffset64,
             b"ctts" => AtomType::CompositionTimeToSample,
             b"dac3" => AtomType::Ac3Config,
+            b"dac4" => AtomType::Ac4Config,
             b"dec3" => AtomType::Eac3Config,
             b"data" => AtomType::MetaTagData,
             b"dfLa" => AtomType::FlacDsConfig,
