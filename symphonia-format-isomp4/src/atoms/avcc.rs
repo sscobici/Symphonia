@@ -25,14 +25,14 @@ pub struct AvcCAtom {
 impl Atom for AvcCAtom {
     fn read<R: ReadAtom>(it: &mut AtomIterator<R>, header: &AtomHeader) -> Result<Self> {
         // TODO: Validate.
-        const MAX_AVCC_ATOM_SIZE: u64 = 1 * 1024;
+        const MAX_AVCC_ATOM_SIZE: u64 = 4 * 1024;
 
         // The AVCConfiguration atom payload is a single AVCDecoderConfigurationRecord. This record
         // forms the defacto codec extra data. It should not exceed 1 kB.
         let len = match header.data_size() {
             Some(len) if len <= MAX_AVCC_ATOM_SIZE => len as usize,
             Some(_) => {
-                return decode_error("isomp4 (avcC): atom size is greater than 1 kb");
+                return decode_error("isomp4 (avcC): atom size is greater than 4 kb");
             }
             None => {
                 return decode_error("isomp4 (avcC): expected atom size to be known");
