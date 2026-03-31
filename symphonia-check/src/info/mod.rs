@@ -17,6 +17,7 @@ use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::Path;
 
+use isolang::Language;
 use log::warn;
 use mediainfo::{build_mediainfo_command, get_mediainfo_format};
 use symphonia::core::codecs::CodecParameters;
@@ -197,9 +198,7 @@ fn compare_track(diff_lines: &mut Vec<Line>, act: &Track, exp: &Track) {
 
     compare_codec_params(diff_lines, &act.codec_params, &exp.codec_params);
 
-    if act.language != exp.language {
-        diff_lines.push(Line::new("Language", to_ref(&act.language), to_ref(&exp.language)));
-    }
+    compare_language(diff_lines, &act.language, &exp.language);
 
     // compare duration ignoring last millisecond.
     if !equal_duration(act, exp) {
@@ -308,6 +307,26 @@ fn compare_s_params(
     if act.codec != exp.codec {
         diff_lines.push(Line::new("Format", get_s_codec(act.codec), get_s_codec(exp.codec)));
     }
+}
+
+fn compare_language(diff_lines: &mut Vec<Line>, act: &Option<String>, exp: &Option<String>) {
+    match (act.as_deref(), exp.as_deref()) {
+        (Some("und"), None) | (Some(""), Some("eng")) => {}
+        (Some(act), Some(exp)) => {
+            let act = act.split(&['-', '_'][..]).next().unwrap_or(act);
+            if act.len() == 2 && exp.len() == 3 {
+                if let Some(exp_lang) = Language::from_639_3(exp) {
+                    if act != exp_lang.to_639_1().unwrap() {
+                        diff_lines.push(Line::new("Language", act, exp));
+                    }
+                }
+            }
+            else if act != exp {
+                diff_lines.push(Line::new("Language", act, exp));
+            }
+        }
+        _ => diff_lines.push(Line::new("Language", to_ref(act), to_ref(exp))),
+    };
 }
 
 fn get_v_codec(codec: VideoCodecId) -> &'static str {

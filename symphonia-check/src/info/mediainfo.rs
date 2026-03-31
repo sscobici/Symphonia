@@ -41,8 +41,8 @@ struct MediainfoTrack {
     #[serde(rename = "ID")]
     id: Option<String>,
 
-    #[serde(rename = "Format")]
-    format: Option<String>,
+    #[serde(rename = "Format_String")]
+    format_string: Option<String>,
 
     #[serde(rename = "Format_Profile")]
     format_profile: Option<String>,
@@ -69,7 +69,7 @@ struct MediainfoTrack {
     height: Option<String>,
 
     #[serde(rename = "Language_String3")]
-    language: Option<String>,
+    language3: Option<String>,
 
     #[serde(rename = "Channels")]
     channels: Option<String>,
@@ -140,7 +140,7 @@ pub fn get_mediainfo_format(opts: &InfoTestOptions) -> Result<Box<dyn FormatRead
 
     // contains general information about the file
     let general = &data.tracks[0];
-    if general.format.is_none() {
+    if general.format_string.is_none() {
         return decode_error("mediainfo: cannot detect media file type");
     }
 
@@ -193,7 +193,7 @@ fn add_track(tracks: &mut Vec<Track>, tr: &MediainfoTrack) {
         if let Some(codec_params) = codec_params {
             track.with_codec_params(codec_params);
         }
-        if let Some(language) = &tr.language {
+        if let Some(language) = &tr.language3 {
             track.with_language(language);
         }
         if let Some(duration) = duration {
@@ -222,7 +222,7 @@ fn parse_duration(duration: &str) -> Option<u64> {
 }
 
 fn get_v_codec_params(tr: &MediainfoTrack, id: u32) -> Option<CodecParameters> {
-    if let Some(format) = &tr.format {
+    if let Some(format) = &tr.format_string {
         let codec = match format.as_str() {
             "HEVC" => CODEC_ID_HEVC,
             "MPEG-4 Visual" => CODEC_ID_MPEG4,
@@ -252,13 +252,22 @@ fn get_v_codec_params(tr: &MediainfoTrack, id: u32) -> Option<CodecParameters> {
 }
 
 fn get_a_codec_params(tr: &MediainfoTrack, tr_id: u32) -> Option<CodecParameters> {
-    if let Some(format) = &tr.format {
+    if let Some(format) = &tr.format_string {
         let codec = match format.as_str() {
             "AAC" => CODEC_ID_AAC,
+            "AAC LC" => CODEC_ID_AAC,
+            "AAC LC SBR" => CODEC_ID_AAC,
+            "AAC LTP" => CODEC_ID_AAC,
             "AC-3" => CODEC_ID_AC3,
+            "AC-4" => CODEC_ID_AC4,
             "E-AC-3" => CODEC_ID_EAC3,
+            "E-AC-3 JOC" => CODEC_ID_EAC3,
             "DTS" => CODEC_ID_DCA,
+            "DTS LBR" => CODEC_ID_DCA,
+            "DTS-UHD" => CODEC_ID_DCA,
+            "DTS XLL" => CODEC_ID_DCA,
             "MLP FBA" => CODEC_ID_TRUEHD,
+            "MLP FBA 16-ch" => CODEC_ID_TRUEHD,
             "FLAC" => CODEC_ID_FLAC,
             "Opus" => CODEC_ID_OPUS,
             "Vorbis" => CODEC_ID_VORBIS,
@@ -334,7 +343,7 @@ fn get_a_codec_params(tr: &MediainfoTrack, tr_id: u32) -> Option<CodecParameters
 }
 
 fn get_s_codec_params(tr: &MediainfoTrack, id: u32) -> Option<CodecParameters> {
-    if let Some(format) = &tr.format {
+    if let Some(format) = &tr.format_string {
         let codec = match format.as_str() {
             "Timed Text" => CODEC_ID_MOV_TEXT,
             "UTF-8" => CODEC_ID_TEXT_UTF8,
@@ -356,7 +365,7 @@ fn get_s_codec_params(tr: &MediainfoTrack, id: u32) -> Option<CodecParameters> {
 }
 
 fn get_format_info(general: &MediainfoTrack, first: Option<&MediainfoTrack>) -> FormatInfo {
-    match &general.format {
+    match &general.format_string {
         Some(format) => {
             let (format, short_name) = match format.as_str() {
                 "MPEG-4" => (FORMAT_ID_ISOMP4, "isomp4"),

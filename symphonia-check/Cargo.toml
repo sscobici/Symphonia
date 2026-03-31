@@ -18,3 +18,4 @@ pretty_env_logger = "0.5"
 symphonia = { version = "0.6.0-alpha.2", path = "../symphonia", features = ["all"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+isolang = "2.4.0"
