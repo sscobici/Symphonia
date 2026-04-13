@@ -212,7 +212,10 @@ fn is_supported_pcm_codec(codec_id: AudioCodecId) -> bool {
 /// Pulse Code Modulation (PCM) decoder for all raw PCM, and log-PCM codecs.
 pub struct PcmDecoder {
     params: AudioCodecParameters,
+    /// The number of bits in a coded sample that are valid.
     coded_width: u32,
+    /// The number of bytes per coded frame.
+    bytes_per_coded_frame: usize,
     buf: GenericAudioBuffer,
 }
 
@@ -222,11 +225,6 @@ impl PcmDecoder {
         if !is_supported_pcm_codec(params.codec) {
             return unsupported_error("pcm: invalid codec");
         }
-
-        let frames = match params.max_frames_per_packet {
-            Some(frames) => frames as usize,
-            _ => return unsupported_error("pcm: maximum frames per packet is required"),
-        };
 
         let rate = match params.sample_rate {
             Some(rate) => rate,
@@ -245,20 +243,24 @@ impl PcmDecoder {
             return unsupported_error("pcm: channels or channel_layout is required");
         };
 
+        // If the maximum number of frames is known, use it to pre-allocate the audio buffer.
+        // Otherwise, start with a 0 capacity and let the buffer grow dynamically while decoding.
+        let capacity = params.max_frames_per_packet.unwrap_or(0) as usize;
+
         // Determine the sample format for the audio buffer based on the codec ID.
-        let (sample_format, sample_format_width) = match params.codec {
-            CODEC_ID_PCM_S32LE | CODEC_ID_PCM_S32BE => (SampleFormat::S32, 32),
-            CODEC_ID_PCM_S24LE | CODEC_ID_PCM_S24BE => (SampleFormat::S24, 24),
-            CODEC_ID_PCM_S16LE | CODEC_ID_PCM_S16BE => (SampleFormat::S16, 16),
-            CODEC_ID_PCM_S8 => (SampleFormat::S8, 8),
-            CODEC_ID_PCM_U32LE | CODEC_ID_PCM_U32BE => (SampleFormat::U32, 32),
-            CODEC_ID_PCM_U24LE | CODEC_ID_PCM_U24BE => (SampleFormat::U24, 24),
-            CODEC_ID_PCM_U16LE | CODEC_ID_PCM_U16BE => (SampleFormat::U16, 16),
-            CODEC_ID_PCM_U8 => (SampleFormat::U8, 8),
-            CODEC_ID_PCM_F32LE | CODEC_ID_PCM_F32BE => (SampleFormat::F32, 32),
-            CODEC_ID_PCM_F64LE | CODEC_ID_PCM_F64BE => (SampleFormat::F64, 64),
-            CODEC_ID_PCM_ALAW => (SampleFormat::S16, 16),
-            CODEC_ID_PCM_MULAW => (SampleFormat::S16, 16),
+        let (sample_format, sample_format_width, bytes_per_coded_sample) = match params.codec {
+            CODEC_ID_PCM_S32LE | CODEC_ID_PCM_S32BE => (SampleFormat::S32, 32, 4),
+            CODEC_ID_PCM_S24LE | CODEC_ID_PCM_S24BE => (SampleFormat::S24, 24, 3),
+            CODEC_ID_PCM_S16LE | CODEC_ID_PCM_S16BE => (SampleFormat::S16, 16, 2),
+            CODEC_ID_PCM_S8 => (SampleFormat::S8, 8, 1),
+            CODEC_ID_PCM_U32LE | CODEC_ID_PCM_U32BE => (SampleFormat::U32, 32, 4),
+            CODEC_ID_PCM_U24LE | CODEC_ID_PCM_U24BE => (SampleFormat::U24, 24, 3),
+            CODEC_ID_PCM_U16LE | CODEC_ID_PCM_U16BE => (SampleFormat::U16, 16, 2),
+            CODEC_ID_PCM_U8 => (SampleFormat::U8, 8, 1),
+            CODEC_ID_PCM_F32LE | CODEC_ID_PCM_F32BE => (SampleFormat::F32, 32, 4),
+            CODEC_ID_PCM_F64LE | CODEC_ID_PCM_F64BE => (SampleFormat::F64, 64, 8),
+            CODEC_ID_PCM_ALAW => (SampleFormat::S16, 16, 1),
+            CODEC_ID_PCM_MULAW => (SampleFormat::S16, 16, 1),
             _ => unreachable!(),
         };
 
@@ -287,16 +289,24 @@ impl PcmDecoder {
             return decode_error("pcm: coded bits per sample is greater than the sample format");
         }
 
-        // Create an audio buffer of the correct format.
-        let buf = GenericAudioBuffer::new(sample_format, spec, frames);
+        // The number of bytes per coded audio frame.
+        let bytes_per_coded_frame = bytes_per_coded_sample * spec.channels().count();
 
-        Ok(PcmDecoder { params: params.clone(), coded_width, buf })
+        // Create an audio buffer of the correct sample format.
+        let buf = GenericAudioBuffer::new(sample_format, spec, capacity);
+
+        Ok(PcmDecoder { params: params.clone(), coded_width, bytes_per_coded_frame, buf })
     }
 
     fn decode_inner(&mut self, packet: &Packet) -> Result<()> {
-        let mut reader = packet.as_buf_reader();
+        // Calculate the number of complete audio frames per-packet.
+        let num_frames = packet.buf().len() / self.bytes_per_coded_frame;
 
+        // Clear and grow the audio buffer to the required capacity.
         self.buf.clear();
+        self.buf.grow_capacity(num_frames);
+
+        let mut reader = packet.as_buf_reader();
 
         let _ = match self.params.codec {
             CODEC_ID_PCM_S32LE => {

@@ -112,6 +112,15 @@ impl GenericAudioBuffer {
         impl_generic_func!(self, buf, buf.clear());
     }
 
+    /// Grows the capacity of the buffer if the new capacity is larger than the current capacity.
+    ///
+    /// # Realtime Safety
+    ///
+    /// This function will allocate if `new_capacity` exceeds the current capacity.
+    pub fn grow_capacity(&mut self, new_capacity: usize) {
+        impl_generic_func!(self, buf, buf.grow_capacity(new_capacity))
+    }
+
     /// Resizes the buffer such that the number of frames is `new_len`. New frames are silent.
     ///
     /// See [`AudioBuffer::resize_with_silence`] for full details.
