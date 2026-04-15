@@ -407,8 +407,8 @@ impl FormatReader for AiffReader<'_> {
 
         // If the total number of frames in the track is known, verify the desired frame timestamp
         // does not exceed it.
-        if let Some(n_frames) = track.num_frames {
-            if required_ts.get() as u64 > n_frames {
+        if let Some(num_frames) = track.num_frames {
+            if required_ts.get() as u64 > num_frames {
                 return seek_error(SeekErrorKind::OutOfRange);
             }
         }
