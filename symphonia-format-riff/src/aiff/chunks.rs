@@ -58,12 +58,7 @@ impl CommonChunk {
         };
 
         let channels = map_aiff_channel_count(num_channels)?;
-        Ok(FormatData::Pcm(FormatPcm {
-            bits_per_sample,
-            valid_bits_per_sample: bits_per_sample,
-            channels,
-            codec,
-        }))
+        Ok(FormatData::Pcm(FormatPcm { bits_per_sample, valid_bits_per_sample, channels, codec }))
     }
 
     fn read_alaw_pcm_fmt(bits_per_sample: u16, num_channels: u16) -> Result<FormatData> {

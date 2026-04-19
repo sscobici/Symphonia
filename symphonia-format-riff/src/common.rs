@@ -422,7 +422,7 @@ pub fn append_format_params(
             codec_params
                 .for_codec(pcm.codec)
                 .with_bits_per_coded_sample(u32::from(pcm.valid_bits_per_sample))
-                .with_bits_per_sample(u32::from(pcm.bits_per_sample))
+                .with_bits_per_sample(u32::from(pcm.valid_bits_per_sample))
                 .with_channels(pcm.channels);
         }
         FormatData::Adpcm(adpcm) => {
@@ -435,7 +435,7 @@ pub fn append_format_params(
             codec_params
                 .for_codec(ext.codec)
                 .with_bits_per_coded_sample(u32::from(ext.valid_bits_per_sample))
-                .with_bits_per_sample(u32::from(ext.bits_per_sample))
+                .with_bits_per_sample(u32::from(ext.valid_bits_per_sample))
                 .with_channels(ext.channels);
         }
         FormatData::ALaw(alaw) => {
