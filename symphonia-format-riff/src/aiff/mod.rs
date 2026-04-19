@@ -95,7 +95,7 @@ impl<'s> AiffReader<'s> {
 
         // Chunks can be read in any order, so collect them to be processed later.
         let mut comm = None;
-        let mut data = None;
+        let mut ssnd = None;
         let mut mark = None;
         let mut comt = None;
         let mut id3 = None;
@@ -122,11 +122,11 @@ impl<'s> AiffReader<'s> {
                 }
                 RiffAiffChunks::Sound(chunk) => {
                     // Only one sound data chunk is allowed.
-                    if data.is_some() {
+                    if ssnd.is_some() {
                         return decode_error("aiff: multiple sound data chunks");
                     }
 
-                    data = Some(chunk.parse(&mut mss)?);
+                    ssnd = Some(chunk.parse(&mut mss)?);
 
                     // If the media source is not seekable, then it is not possible to scan for
                     // chunks past the sound data chunk.
@@ -135,7 +135,7 @@ impl<'s> AiffReader<'s> {
                     }
 
                     // The length of the sound data chunk must also be known.
-                    if let Some(len) = data.as_ref().unwrap().len {
+                    if let Some(len) = ssnd.as_ref().unwrap().len {
                         mss.ignore_bytes(u64::from(len))?;
                     }
                     else {
@@ -158,11 +158,11 @@ impl<'s> AiffReader<'s> {
                     }
 
                     // Save comments chunk for post-processing.
-                    comt = Some(chunk.parse(&mut mss)?);
+                    comt = Some(chunk.parse_and_skip_unread(&mut mss)?);
                 }
                 RiffAiffChunks::AppSpecific(chunk) => {
                     // Add application-specific data.
-                    let appl = chunk.parse(&mut mss)?;
+                    let appl = chunk.parse_and_skip_unread(&mut mss)?;
 
                     attachments.push(Attachment::VendorData(VendorDataAttachment {
                         ident: appl.application,
@@ -171,21 +171,22 @@ impl<'s> AiffReader<'s> {
                 }
                 RiffAiffChunks::Text(chunk) => {
                     // Add tag.
-                    let text = chunk.parse(&mut mss)?;
+                    let text = chunk.parse_and_skip_unread(&mut mss)?;
                     builder.add_tag(text.tag);
                 }
-                RiffAiffChunks::Id3(chunk) => id3 = Some(chunk.parse(&mut mss)?),
+                RiffAiffChunks::Id3(chunk) => id3 = Some(chunk.parse_and_skip_unread(&mut mss)?),
             }
         }
 
         // The common element is mandatory.
         let comm = comm.ok_or(Error::DecodeError("aiff: missing common element"))?;
-        // The sound data element is mandatory.
-        let data = data.ok_or(Error::DecodeError("aiff: missing sound data chunk"))?;
 
-        // Seek to the sound data.
+        // If the sound data element is not present, then assume an empty one.
+        let ssnd = ssnd.unwrap_or_else(|| SoundChunk::empty(mss.pos()));
+
+        // Seek to the start of the sound data.
         if is_seekable {
-            mss.seek(SeekFrom::Start(data.data_start_pos))?;
+            mss.seek(SeekFrom::Start(ssnd.data_start_pos))?;
         }
 
         // Metadata processing.
@@ -220,7 +221,7 @@ impl<'s> AiffReader<'s> {
         track.with_codec_params(CodecParameters::Audio(codec_params));
 
         // Append sound data chunk fields to track.
-        if let Some(data_len) = data.len {
+        if let Some(data_len) = ssnd.len {
             append_data_params(&mut track, u64::from(data_len), &packet_info);
         }
 
@@ -231,8 +232,8 @@ impl<'s> AiffReader<'s> {
             chapters: chapters.or(opts.external_data.chapters),
             metadata,
             packet_info,
-            data_start_pos: data.data_start_pos,
-            data_end_pos: data.len.map(|len| data.data_start_pos + u64::from(len)),
+            data_start_pos: ssnd.data_start_pos,
+            data_end_pos: ssnd.len.map(|data_len| ssnd.data_start_pos + u64::from(data_len)),
         })
     }
 }

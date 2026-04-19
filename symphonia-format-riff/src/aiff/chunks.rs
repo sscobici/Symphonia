@@ -10,11 +10,12 @@ use std::fmt;
 use std::num::NonZero;
 use std::sync::Arc;
 
+use log::debug;
 use symphonia_core::audio::{Channels, layouts};
 use symphonia_core::codecs::audio::well_known::{
     CODEC_ID_PCM_ALAW, CODEC_ID_PCM_F32BE, CODEC_ID_PCM_F64BE, CODEC_ID_PCM_MULAW, CODEC_ID_PCM_S8,
     CODEC_ID_PCM_S16BE, CODEC_ID_PCM_S16LE, CODEC_ID_PCM_S24BE, CODEC_ID_PCM_S32BE,
-    CODEC_ID_PCM_S32LE,
+    CODEC_ID_PCM_S32LE, CODEC_ID_PCM_U8,
 };
 use symphonia_core::errors::{Result, decode_error, unsupported_error};
 use symphonia_core::io::ReadBytes;
@@ -62,16 +63,16 @@ impl CommonChunk {
     }
 
     fn read_alaw_pcm_fmt(bits_per_sample: u16, num_channels: u16) -> Result<FormatData> {
-        if bits_per_sample != 8 {
-            return decode_error("aifc: bits per sample invalid for alaw");
+        if bits_per_sample != 16 {
+            debug!("bits per sample not 16 for alaw");
         }
         let channels = map_aiff_channel_count(num_channels)?;
         Ok(FormatData::ALaw(FormatALaw { codec: CODEC_ID_PCM_ALAW, channels }))
     }
 
     fn read_mulaw_pcm_fmt(bits_per_sample: u16, num_channels: u16) -> Result<FormatData> {
-        if bits_per_sample != 8 {
-            return decode_error("aifc: bits per sample invalid for u-law");
+        if bits_per_sample != 16 {
+            debug!("bits per sample not 16 for u-law");
         }
         let channels = map_aiff_channel_count(num_channels)?;
         Ok(FormatData::MuLaw(FormatMuLaw { codec: CODEC_ID_PCM_MULAW, channels }))
@@ -116,17 +117,22 @@ impl CommonChunk {
         }))
     }
 
-    fn read_ieee_fmt(bits_per_sample: u16, num_channels: u16) -> Result<FormatData> {
-        // Select the appropriate codec using bits per sample. Samples are always interleaved and
-        // little-endian encoded for the IEEE Float format.
-        let codec = match bits_per_sample {
-            32 => CODEC_ID_PCM_F32BE,
-            64 => CODEC_ID_PCM_F64BE,
-            _ => return decode_error("aifc: bits per sample for fmt_ieee must be 32 or 64 bits"),
-        };
+    fn read_fl32_fmt(bits_per_sample: u16, num_channels: u16) -> Result<FormatData> {
+        if bits_per_sample != 32 {
+            debug!("bits per sample is not 32 for fl32 format");
+        }
 
         let channels = map_aiff_channel_count(num_channels)?;
-        Ok(FormatData::IeeeFloat(FormatIeeeFloat { channels, codec }))
+        Ok(FormatData::IeeeFloat(FormatIeeeFloat { channels, codec: CODEC_ID_PCM_F32BE }))
+    }
+
+    fn read_fl64_fmt(bits_per_sample: u16, num_channels: u16) -> Result<FormatData> {
+        if bits_per_sample != 64 {
+            debug!("bits per sample is not 64 for fl64 format");
+        }
+
+        let channels = map_aiff_channel_count(num_channels)?;
+        Ok(FormatData::IeeeFloat(FormatIeeeFloat { channels, codec: CODEC_ID_PCM_F64BE }))
     }
 
     fn read_sowt_fmt(bits_per_sample: u16, num_channels: u16) -> Result<FormatData> {
@@ -148,6 +154,21 @@ impl CommonChunk {
         let codec = match bits_per_sample {
             16 => CODEC_ID_PCM_S16BE,
             _ => return decode_error("aiff: bits per sample for twos must be 16 bits"),
+        };
+
+        let channels = map_aiff_channel_count(num_channels)?;
+        Ok(FormatData::Pcm(FormatPcm {
+            bits_per_sample,
+            valid_bits_per_sample: bits_per_sample,
+            channels,
+            codec,
+        }))
+    }
+
+    fn read_raw_fmt(bits_per_sample: u16, num_channels: u16) -> Result<FormatData> {
+        let codec = match bits_per_sample {
+            8 => CODEC_ID_PCM_U8,
+            _ => return decode_error("aiff: bits per sample for raw must be 8 bits"),
         };
 
         let channels = map_aiff_channel_count(num_channels)?;
@@ -258,10 +279,11 @@ impl CommonChunkParser for ChunkParser<CommonChunk> {
             b"in24" | b"IN24" => CommonChunk::read_in24_fmt(sample_size, num_channels),
             b"in32" | b"IN32" => CommonChunk::read_in32_fmt(sample_size, num_channels),
             b"23ni" | b"23NI" => CommonChunk::read_23ni_fmt(sample_size, num_channels),
-            b"fl32" | b"FL32" => CommonChunk::read_ieee_fmt(sample_size, num_channels),
-            b"fl64" | b"FL64" => CommonChunk::read_ieee_fmt(sample_size, num_channels),
+            b"fl32" | b"FL32" => CommonChunk::read_fl32_fmt(sample_size, num_channels),
+            b"fl64" | b"FL64" => CommonChunk::read_fl64_fmt(sample_size, num_channels),
             b"sowt" | b"SOWT" => CommonChunk::read_sowt_fmt(sample_size, num_channels),
             b"twos" | b"TWOS" => CommonChunk::read_twos_fmt(sample_size, num_channels),
+            b"raw " | b"RAW " => CommonChunk::read_raw_fmt(sample_size, num_channels),
             _ => return unsupported_error("aifc: compression type not supported"),
         }?;
 
@@ -279,6 +301,13 @@ pub struct SoundChunk {
     pub data_start_pos: u64,
 }
 
+impl SoundChunk {
+    /// Create an empty sound chunk starting at the specified data start position.
+    pub fn empty(data_start_pos: u64) -> Self {
+        SoundChunk { len: Some(0), offset: 0, block_size: 0, data_start_pos }
+    }
+}
+
 impl ParseChunk for SoundChunk {
     fn parse<B: ReadBytes>(reader: &mut B, _: [u8; 4], len: u32) -> Result<SoundChunk> {
         // Validate minimum size.
@@ -289,15 +318,21 @@ impl ParseChunk for SoundChunk {
         let offset = reader.read_be_u32()?;
         let block_size = reader.read_be_u32()?;
 
-        if offset != 0 || block_size != 0 {
+        if block_size != 0 {
             return unsupported_error("aiff: no support for aiff block-aligned data");
         }
+
+        if offset > len - 8 {
+            return decode_error("aiff: sound data offset too large");
+        }
+
+        reader.ignore_bytes(u64::from(offset))?;
 
         let data_start_pos = reader.pos();
 
         // TODO: FFmpeg seems to set the chunk length to 0 when streaming. This, however, doesn't
         // appear to be well supported, event by FFmpeg.
-        Ok(SoundChunk { len: Some(len - 8), offset, block_size, data_start_pos })
+        Ok(SoundChunk { len: Some(len - offset - 8), offset, block_size, data_start_pos })
     }
 }
 

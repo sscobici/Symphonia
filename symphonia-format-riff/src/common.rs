@@ -148,7 +148,24 @@ impl<T: ParseChunkTag> ChunksReader<T> {
 
 /// Common trait implemented for all chunks that are parsed by a `ChunkParser`.
 pub trait ParseChunk: Sized {
+    /// Parse the chunk.
     fn parse<B: ReadBytes>(reader: &mut B, tag: [u8; 4], len: u32) -> Result<Self>;
+
+    /// Parse the chunk and discard any unread data in the chunk.
+    fn parse_and_skip_unread<B: ReadBytes>(reader: &mut B, tag: [u8; 4], len: u32) -> Result<Self> {
+        let pos = reader.pos();
+        let result = Self::parse(reader, tag, len);
+
+        // Only discard unread data if parsing was successful.
+        if result.is_ok() {
+            let bytes_read = reader.pos() - pos;
+            if bytes_read < u64::from(len) {
+                reader.ignore_bytes(u64::from(len) - bytes_read)?;
+            }
+        }
+
+        result
+    }
 }
 
 /// `ChunkParser` is a utility struct for unifying the parsing of chunks.
@@ -165,6 +182,10 @@ impl<P: ParseChunk> ChunkParser<P> {
 
     pub fn parse<B: ReadBytes>(&self, reader: &mut B) -> Result<P> {
         P::parse(reader, self.tag, self.len)
+    }
+
+    pub fn parse_and_skip_unread<B: ReadBytes>(&self, reader: &mut B) -> Result<P> {
+        P::parse_and_skip_unread(reader, self.tag, self.len)
     }
 }
 
