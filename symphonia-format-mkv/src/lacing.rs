@@ -125,6 +125,15 @@ pub(crate) fn extract_frames(
                 _ => unreachable!(),
             };
 
+            // The total of all decoded frame sizes should not exceed the block they will be read
+            // from.
+            let total_laced_size = sizes.iter().try_fold(0u64, |acc, &size| acc.checked_add(size));
+
+            match total_laced_size {
+                Some(size) if size <= block.len() as u64 => (),
+                _ => return decode_error("mkv: total of laced frame sizes exceeds block"),
+            }
+
             let frame_duration = block_duration
                 .map(|it| it / (num_frames + 1) as u64)
                 .or(default_frame_duration)
