@@ -238,7 +238,7 @@ fn read_id3v2p4_extended_header<B: ReadBytes>(reader: &mut B) -> Result<Extended
             _ => unreachable!(),
         };
 
-        let text_encoding = match (restrictions & 0x40) >> 5 {
+        let text_encoding = match (restrictions & 0x20) >> 5 {
             0 => TextEncodingRestriction::None,
             1 => TextEncodingRestriction::Utf8OrIso88591,
             _ => unreachable!(),
