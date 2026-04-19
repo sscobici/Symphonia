@@ -418,8 +418,8 @@ pub fn read_vorbis_comment<B: ReadBytes>(
     // If chapter information is present, try to build a chapter group.
     if !chapters.is_empty() {
         let items = chapters
-            .into_iter()
-            .filter_map(|(_, infos)| {
+            .into_values()
+            .filter_map(|infos| {
                 let mut time = None;
                 let mut tags = Vec::new();
 

@@ -494,10 +494,10 @@ impl<'s> CafReader<'s> {
                     }
 
                     match &mut self.packet_info {
-                        PacketInfo::FixedAudioPacket { start_pts, .. } => {
-                            if table.priming_frames > 0 {
-                                *start_pts = Timestamp::from(-i64::from(table.priming_frames));
-                            }
+                        PacketInfo::FixedAudioPacket { start_pts, .. }
+                            if table.priming_frames > 0 =>
+                        {
+                            *start_pts = Timestamp::from(-i64::from(table.priming_frames));
                         }
                         PacketInfo::VariableAudioPacket { packets, .. } => {
                             num_frames = Some(table.valid_frames as u64);

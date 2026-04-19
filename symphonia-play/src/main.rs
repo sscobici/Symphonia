@@ -284,12 +284,7 @@ fn decode_only(mut reader: Box<dyn FormatReader>, opts: DecodeOptions) -> Result
     let track_id = track.id;
 
     // Decode all packets, ignoring all decode errors.
-    loop {
-        let Some(packet) = reader.next_packet()?
-        else {
-            break;
-        };
-
+    while let Some(packet) = reader.next_packet()? {
         // If the packet does not belong to the selected track, skip over it.
         if packet.track_id() != track_id {
             continue;
@@ -432,13 +427,7 @@ fn play_track(
     let dur = track.num_frames.map(Duration::new);
 
     // Decode and play the packets belonging to the selected track.
-    loop {
-        // Get the next packet from the format reader.
-        let Some(packet) = reader.next_packet()?
-        else {
-            break;
-        };
-
+    while let Some(packet) = reader.next_packet()? {
         // If the packet does not belong to the selected track, skip it.
         if packet.track_id() != opts.track_id {
             continue;

@@ -279,13 +279,9 @@ impl PageReader {
         B: ReadBytes + SeekBuffered,
     {
         loop {
+            // Exit if a page with the specific serial is found.
             match self.try_next_page(reader) {
-                Ok(_) => {
-                    // Exit if a page with the specific serial is found.
-                    if self.header.serial == serial && !self.header.is_continuation {
-                        break;
-                    }
-                }
+                Ok(_) if self.header.serial == serial && !self.header.is_continuation => break,
                 Err(Error::IoError(e)) => return Err(Error::from(e)),
                 _ => (),
             }

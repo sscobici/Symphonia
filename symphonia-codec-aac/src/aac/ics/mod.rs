@@ -128,21 +128,19 @@ impl IcsInfo {
         self.window_sequence = bs.read_bits_leq32(2)? as u8;
 
         match self.prev_window_sequence {
-            ONLY_LONG_SEQUENCE | LONG_STOP_SEQUENCE => {
+            ONLY_LONG_SEQUENCE | LONG_STOP_SEQUENCE
                 if (self.window_sequence != ONLY_LONG_SEQUENCE)
-                    && (self.window_sequence != LONG_START_SEQUENCE)
-                {
-                    debug!("previous window is invalid");
-                }
+                    && (self.window_sequence != LONG_START_SEQUENCE) =>
+            {
+                debug!("previous window is invalid");
             }
-            LONG_START_SEQUENCE | EIGHT_SHORT_SEQUENCE => {
+            LONG_START_SEQUENCE | EIGHT_SHORT_SEQUENCE
                 if (self.window_sequence != EIGHT_SHORT_SEQUENCE)
-                    && (self.window_sequence != LONG_STOP_SEQUENCE)
-                {
-                    debug!("previous window is invalid");
-                }
+                    && (self.window_sequence != LONG_STOP_SEQUENCE) =>
+            {
+                debug!("previous window is invalid");
             }
-            _ => {}
+            _ => (),
         };
 
         self.window_shape = bs.read_bool()?;

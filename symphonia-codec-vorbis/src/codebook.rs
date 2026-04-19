@@ -92,16 +92,14 @@ fn unpack_vq_lookup_type2(
         vq_lookup.chunks_exact_mut(codebook_dimensions as usize).enumerate()
     {
         let mut last = 0.0;
-        let mut multiplicand_offset = lookup_offset * codebook_dimensions as usize;
+        let offset = lookup_offset * codebook_dimensions as usize;
 
-        for value in value_vector.iter_mut() {
-            *value = f32::from(multiplicands[multiplicand_offset]) * delta_value + min_value + last;
+        for (offset, value) in (offset..).zip(value_vector.iter_mut()) {
+            *value = f32::from(multiplicands[offset]) * delta_value + min_value + last;
 
             if sequence_p {
                 last = *value;
             }
-
-            multiplicand_offset += 1;
         }
     }
 
