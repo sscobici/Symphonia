@@ -542,6 +542,11 @@ impl AtomHeader {
                     return Err(AtomError::InvalidAtomSize);
                 }
 
+                // The atom size should not overflow the max stream position u64::MAX
+                if atom_pos.checked_add(large_atom_len).is_none() {
+                    return Err(AtomError::InvalidAtomSize);
+                }
+
                 (AtomHeader::LARGE_HEADER_SIZE, NonZeroU64::new(large_atom_len))
             }
             _ => {
