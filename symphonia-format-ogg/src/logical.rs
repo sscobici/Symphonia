@@ -494,6 +494,7 @@ impl LogicalStream {
             let track = self.mapper.track_mut();
 
             track.with_num_frames(num_frames);
+            track.with_duration(Duration::from(num_frames));
 
             if num_padding_frames > 0 {
                 track.with_padding(num_padding_frames);

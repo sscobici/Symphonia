@@ -20,6 +20,7 @@ use symphonia_core::formats::Track;
 use symphonia_core::io::{MediaSourceStream, ReadBytes};
 use symphonia_core::meta::{MetadataBuilder, MetadataRevision};
 
+use symphonia_core::units::Duration;
 use symphonia_metadata::embedded::riff;
 
 use crate::common::{
@@ -657,6 +658,7 @@ impl ParseChunkTag for RiffInfoListChunks {
 
 pub fn append_fact_params(track: &mut Track, fact: &FactChunk) {
     track.with_num_frames(u64::from(fact.num_frames));
+    track.with_duration(Duration::from(u64::from(fact.num_frames)));
 }
 
 pub fn read_info_chunk(source: &mut MediaSourceStream<'_>, len: u32) -> Result<MetadataRevision> {

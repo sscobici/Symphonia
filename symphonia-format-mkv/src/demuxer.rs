@@ -297,6 +297,7 @@ impl<'s> MkvReader<'s> {
 
             if let Some(duration) = info.duration {
                 tr.with_num_frames(duration as u64);
+                tr.with_duration(Duration::from(duration as u64));
             }
 
             if let Some(lang_bcp47) = &track.lang_bcp47 {

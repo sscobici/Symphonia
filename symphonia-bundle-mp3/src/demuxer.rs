@@ -459,6 +459,10 @@ impl<'s> MpaReader<'s> {
             }
         }
 
+        if let Some(num_frames) = track.num_frames {
+            track.with_duration(Duration::from(num_frames));
+        }
+
         let first_packet_pos = mss.pos();
         let next_packet_ts = Timestamp::from(-i64::from(track.delay.unwrap_or(0)));
 

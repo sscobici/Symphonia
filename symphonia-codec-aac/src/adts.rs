@@ -70,6 +70,7 @@ impl<'s> AdtsReader<'s> {
         if let Some(n_frames) = approximate_frame_count(&mut mss)? {
             info!("estimating duration from bitrate, may be inaccurate for vbr files");
             track.with_num_frames(n_frames);
+            track.with_duration(Duration::from(n_frames));
         }
 
         Ok(AdtsReader {

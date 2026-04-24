@@ -557,6 +557,7 @@ impl<'s> CafReader<'s> {
 
         if let Some(num_frames) = num_frames {
             track.with_num_frames(num_frames);
+            track.with_duration(Duration::from(num_frames));
         }
 
         Ok(track)

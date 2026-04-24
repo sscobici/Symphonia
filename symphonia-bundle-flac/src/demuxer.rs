@@ -434,6 +434,7 @@ fn read_stream_info_block<B: ReadBytes + FiniteStream>(
     // Total samples per channel (also the total number of frames) is optional.
     if let Some(num_frames) = info.n_samples {
         track.with_num_frames(num_frames);
+        track.with_duration(Duration::from(num_frames));
     }
 
     // Reset the packet parser.
