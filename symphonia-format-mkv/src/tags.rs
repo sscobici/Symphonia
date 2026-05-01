@@ -29,6 +29,38 @@ pub struct TagContext {
     pub target: Option<Target>,
 }
 
+pub enum TargetName {
+    Collection,
+    Volume,
+    Edition,
+    Movie,
+    Album,
+    Part,
+    Chapter,
+    Track,
+    Scene,
+    Subtrack,
+    Shot,
+}
+
+impl TargetName {
+    pub const fn as_str(&self) -> &'static str {
+        match self {
+            TargetName::Collection => "COLLECTION",
+            TargetName::Volume => "VOLUME",
+            TargetName::Edition => "EDITION",
+            TargetName::Movie => "MOVIE",
+            TargetName::Album => "ALBUM",
+            TargetName::Part => "PART",
+            TargetName::Chapter => "CHAPTER",
+            TargetName::Track => "TRACK",
+            TargetName::Scene => "SCENE",
+            TargetName::Subtrack => "SUBTRACK",
+            TargetName::Shot => "SHOT",
+        }
+    }
+}
+
 pub fn make_raw_tags(tag: SimpleTagElement, ctx: &TagContext, out: &mut Vec<RawTag>) {
     // The nested sub-tags of the following tags are flattened into multiple raw tags:
     //
@@ -327,17 +359,17 @@ pub fn map_std_tag(raw: &RawTag, lower_ctx: &TagContext) -> Option<StandardTag> 
 /// assumes target names that are logical for a movie.
 fn default_target_name(target_value: u64, is_video: bool) -> Option<&'static str> {
     let name = match target_value {
-        70 => "COLLECTION",
-        60 if is_video => "VOLUME",
-        60 => "EDITION",
-        50 if is_video => "MOVIE",
-        50 => "ALBUM",
-        40 => "PART",
-        30 if is_video => "CHAPTER",
-        30 => "TRACK",
-        20 if is_video => "SCENE",
-        20 => "SUBTRACK",
-        10 if is_video => "SHOT",
+        70 => TargetName::Collection.as_str(),
+        60 if is_video => TargetName::Volume.as_str(),
+        60 => TargetName::Edition.as_str(),
+        50 if is_video => TargetName::Movie.as_str(),
+        50 => TargetName::Album.as_str(),
+        40 => TargetName::Part.as_str(),
+        30 if is_video => TargetName::Chapter.as_str(),
+        30 => TargetName::Track.as_str(),
+        20 if is_video => TargetName::Scene.as_str(),
+        20 => TargetName::Subtrack.as_str(),
+        10 if is_video => TargetName::Shot.as_str(),
         _ => return None,
     };
     Some(name)

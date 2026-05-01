@@ -14,7 +14,7 @@ use symphonia_core::formats::prelude::*;
 use symphonia_core::formats::probe::{ProbeFormatData, ProbeableFormat, Score, Scoreable};
 use symphonia_core::formats::well_known::FORMAT_ID_MKV;
 use symphonia_core::io::*;
-use symphonia_core::meta::{Metadata, MetadataLog};
+use symphonia_core::meta::{Metadata, MetadataLog, RawValue};
 use symphonia_core::support_format;
 use symphonia_core::units::TimeBase;
 
@@ -28,6 +28,8 @@ use crate::segment::{
     AttachmentsElement, BlockGroupElement, ChaptersElement, CuesElement, EbmlHeaderElement,
     InfoElement, SeekHeadElement, TagsElement, TargetTagsMap, TracksElement,
 };
+use crate::sub_fields::TAG_DURATION;
+use crate::tags::TargetName;
 
 const MKV_FORMAT_INFO: FormatInfo =
     FormatInfo { format: FORMAT_ID_MKV, short_name: "matroska", long_name: "Matroska / WebM" };
@@ -273,6 +275,7 @@ impl<'s> MkvReader<'s> {
 
         let mut tracks = Vec::new();
         let mut track_states = HashMap::new();
+        let duration_tag_raw_key = TargetName::Movie.as_str().to_string() + "@" + TAG_DURATION;
 
         for track in segment_tracks.tracks {
             // Create the track state.
@@ -297,6 +300,24 @@ impl<'s> MkvReader<'s> {
 
             if let Some(duration) = info.duration {
                 tr.with_num_frames(duration as u64);
+
+                let duration_from_tag = metadata
+                    .metadata()
+                    .current()
+                    .and_then(|rev| {
+                        rev.per_track.iter().find(|meta| meta.track_id == track.uid.get())
+                    })
+                    .and_then(|meta| {
+                        meta.metadata.tags.iter().find(|tag| tag.raw.key == duration_tag_raw_key)
+                    })
+                    .and_then(|tag| match &tag.raw.value {
+                        RawValue::String(s) => parse_mkv_duration(s),
+                        _ => None,
+                    });
+
+                tr.with_duration(
+                    duration_from_tag.unwrap_or_else(|| Duration::from(duration as u64)),
+                );
             }
 
             if let Some(lang_bcp47) = &track.lang_bcp47 {
@@ -654,4 +675,27 @@ impl From<EbmlError> for Error {
         };
         Error::DecodeError(msg)
     }
+}
+
+fn parse_mkv_duration(s: &str) -> Option<Duration> {
+    let (hms, frac) = s.split_once('.')?;
+    if frac.len() != 9 {
+        return None;
+    }
+
+    let mut it = hms.split(':');
+
+    let (h, m, s) = (
+        it.next()?.parse::<u32>().ok()?,
+        it.next()?.parse::<u32>().ok()?,
+        it.next()?.parse::<u32>().ok()?,
+    );
+
+    if it.next().is_some() || m >= 60 || s >= 60 {
+        return None;
+    }
+
+    let nanos = frac.parse::<u32>().ok()?;
+
+    Some(Duration::from(h * 3_600_000 + m * 60_000 + s * 1_000 + nanos / 1_000_000))
 }

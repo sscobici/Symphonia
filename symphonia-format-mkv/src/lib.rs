@@ -30,6 +30,7 @@ pub mod sub_fields {
     //! For the exact meaning of these fields, and the format of their values, please consult the
     //! official Matroska specification.
 
+    pub const TAG_DURATION: &str = "DURATION";
     pub const TAG_LANGUAGE: &str = "LANGUAGE";
     pub const TAG_LANGUAGE_BCP47: &str = "LANGUAGE_BCP47";
 
