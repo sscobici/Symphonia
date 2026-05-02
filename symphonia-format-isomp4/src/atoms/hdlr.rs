@@ -52,7 +52,7 @@ impl Atom for HdlrAtom {
             b"vide" => HandlerType::Video,
             b"soun" => HandlerType::Sound,
             b"meta" => HandlerType::Metadata,
-            b"subt" => HandlerType::Subtitle,
+            b"subt" | b"sbtl" => HandlerType::Subtitle, // "subt" is used in MP4, "sbtl" is used in QuickTime.
             b"text" => HandlerType::Text,
             &hdlr => {
                 warn!("unknown handler type {:?}", hdlr);
